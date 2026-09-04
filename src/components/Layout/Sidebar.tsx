@@ -17,12 +17,12 @@ import { LanguageToggle } from "../LanguageToggle";
 
 const navItems = [
   { to: "/", key: "dashboard", icon: LayoutGrid, end: true },
-  { to: "/inventory", key: "inventory", icon: Package },
-  { to: "/money", key: "money", icon: Wallet },
-  { to: "/dues", key: "dues", icon: Users },
-  { to: "/analytics", key: "analytics", icon: BarChart3 },
-  { to: "/advisor", key: "advisor", icon: Sparkles },
-  { to: "/settings", key: "settings", icon: SettingsIcon },
+  { to: "/inventory", key: "inventory", icon: Package, end: false },
+  { to: "/money", key: "money", icon: Wallet, end: false },
+  { to: "/dues", key: "dues", icon: Users, end: false },
+  { to: "/analytics", key: "analytics", icon: BarChart3, end: false },
+  { to: "/advisor", key: "advisor", icon: Sparkles, end: false },
+  { to: "/settings", key: "settings", icon: SettingsIcon, end: false },
 ] as const;
 
 export function Sidebar({ onShowTour }: { onShowTour: () => void }) {

@@ -351,7 +351,7 @@ export function Dashboard() {
                     <p className="text-sm font-semibold text-gray-800">{p.name}</p>
                     <p className="text-xs text-gray-500">{t("dashboard.inStockSuffix", { stock: p.stock, unit: t(`enums.unit.${p.unit}`) })}</p>
                   </div>
-                  <Badge tone="amber">{t("dashboard.expiresOn", { date: p.expiryDate })}</Badge>
+                  <Badge tone="amber">{t("dashboard.expiresOn", { date: p.expiryDate ?? "" })}</Badge>
                 </li>
               ))}
             </ul>
