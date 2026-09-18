@@ -8,7 +8,19 @@ export function Label({ children }: { children: ReactNode }) {
 }
 
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={`${baseInput} ${props.className ?? ""}`} />;
+  const { onFocus, ...rest } = props;
+  return (
+    <input
+      {...rest}
+      onFocus={(e) => {
+        // Number fields default to 0 — select it on focus so typing replaces
+        // it immediately instead of appending to it (e.g. "0" + "5" -> "05").
+        if (props.type === "number") e.target.select();
+        onFocus?.(e);
+      }}
+      className={`${baseInput} ${props.className ?? ""}`}
+    />
+  );
 }
 
 export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
