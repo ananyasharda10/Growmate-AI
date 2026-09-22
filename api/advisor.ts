@@ -12,6 +12,27 @@ function stripMarkdown(text: string): string {
     .replace(/^#{1,6}\s+/gm, "")
     .replace(/^[-*]\s+/gm, "• ");
 }
+
+// Small/fast models occasionally restart and repeat their entire answer verbatim within one
+// completion instead of stopping after the first pass, which renders as the same answer
+// twice back-to-back. Only collapses an EXACT whole-answer repeat (both halves identical
+// after normalizing whitespace/case) — deliberately conservative so a legitimately long
+// answer that happens to reuse a short phrase is never truncated.
+function dedupeRepeatedAnswer(text: string): string {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  const half = Math.floor(normalized.length / 2);
+  if (half < 20) return text.trim();
+  for (let offset = -3; offset <= 3; offset++) {
+    const splitAt = half + offset;
+    if (splitAt < 20 || splitAt >= normalized.length - 20) continue;
+    const first = normalized.slice(0, splitAt).trim();
+    const second = normalized.slice(splitAt).trim();
+    if (first.toLowerCase() === second.toLowerCase()) {
+      return first;
+    }
+  }
+  return text.trim();
+}
 const MAX_QUESTION_LENGTH = 500;
 // The model does its reasoning inside this same token budget before writing the final
 // answer, so a low limit risks the response getting cut off mid-thought for anything that
@@ -157,7 +178,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    res.status(200).json({ answer: stripMarkdown(answer.trim()) });
+    res.status(200).json({ answer: dedupeRepeatedAnswer(stripMarkdown(answer.trim())) });
   } catch (err) {
     const isTimeout = err instanceof Error && err.name === "AbortError";
     console.error("Advisor request failed:", err);

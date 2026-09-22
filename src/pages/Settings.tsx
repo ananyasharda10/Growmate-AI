@@ -149,7 +149,19 @@ export function Settings() {
           </div>
           <div>
             <Label>{t("settings.currencyLabel")}</Label>
-            <Select value={currency} disabled={hasData} onChange={(e) => setCurrency(e.target.value as Currency)}>
+            <Select
+              value={currency}
+              disabled={hasData}
+              onChange={(e) => {
+                // Applied immediately rather than waiting for "Save changes" below — every
+                // amount in the app is formatted from this value on every render, so leaving
+                // it in local-only state until Save meant navigating away silently discarded
+                // the change with no warning.
+                const next = e.target.value as Currency;
+                setCurrency(next);
+                updateSettings({ currency: next });
+              }}
+            >
               <option value="INR">INR (₹)</option>
               <option value="USD">USD ($)</option>
             </Select>

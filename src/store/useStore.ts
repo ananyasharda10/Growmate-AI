@@ -96,7 +96,8 @@ interface StoreState {
     note?: string;
     date?: string;
     isQuickCash?: boolean;
-  }) => { ok: boolean; error?: string };
+    allowOverstock?: boolean;
+  }) => { ok: boolean; error?: string; insufficientStock?: boolean };
   updateSale: (saleId: string, input: Partial<Sale>) => { ok: boolean; error?: string };
   deleteSale: (saleId: string) => void;
 
@@ -452,8 +453,12 @@ export const useStore = create<StoreState>()(
       if (input.productId && !isQuickCash) {
         const product = s.products.find((p) => p.id === input.productId);
         if (!product) return { ok: false, error: "Product not found." };
-        if (input.quantity > product.stock) {
-          return { ok: false, error: `Only ${product.stock} ${product.unit} available.` };
+        if (input.quantity > product.stock && !input.allowOverstock) {
+          return {
+            ok: false,
+            error: t(get().language, "money.onlyAvailable", { stock: product.stock, unit: t(get().language, `enums.unit.${product.unit}`) }),
+            insufficientStock: true,
+          };
         }
         unitCost = product.cost;
       }
@@ -471,7 +476,7 @@ export const useStore = create<StoreState>()(
         let dues = state.dues;
 
         if (input.productId && !isQuickCash) {
-          products = products.map((p) => (p.id === input.productId ? { ...p, stock: p.stock - input.quantity } : p));
+          products = products.map((p) => (p.id === input.productId ? { ...p, stock: Math.max(0, p.stock - input.quantity) } : p));
           movement = { id: id(), productId: input.productId, type: "sale", quantity: -input.quantity, date, relatedSaleId: saleId };
           movements = [...movements, movement];
         }

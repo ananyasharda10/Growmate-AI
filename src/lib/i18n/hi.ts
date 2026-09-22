@@ -12,6 +12,7 @@ const hi: Translations = {
     pleaseWait: "कृपया रुकें...",
     dash: "—",
     confirm: "पुष्टि करें",
+    close: "बंद करें",
   },
 
   nav: {
@@ -237,6 +238,9 @@ const hi: Translations = {
     deleteExpenseMsg: "इससे यह खर्च और इससे जुड़ा सप्लायर बकाया भी हट जाएगा।",
     chooseProductFirst: "पहले एक उत्पाद चुनें।",
     onlyAvailable: "सिर्फ {{stock}} {{unit}} उपलब्ध है।",
+    overstockConfirmTitle: "स्टॉक से ज़्यादा बेचें?",
+    overstockConfirmMsg: "फ़िलहाल सिर्फ {{stock}} {{unit}} स्टॉक में है। यह मात्रा फिर भी बेचने पर स्टॉक 0 हो जाएगा — इसका इस्तेमाल बैकऑर्डर के लिए या स्टॉक की गड़बड़ी ठीक करने के लिए करें।",
+    sellAnywayBtn: "फिर भी बेचें",
     linkProductLabel: "उत्पाद (वैकल्पिक)",
     linkProductNone: "किसी उत्पाद से लिंक नहीं",
     linkProductNote: "यह मात्रा उस उत्पाद के स्टॉक में अपने आप जुड़ जाएगी।",

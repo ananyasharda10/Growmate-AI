@@ -84,6 +84,7 @@ export function Inventory() {
       .filter((p) => (showArchived ? p.archived : !p.archived))
       .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
   }, [products, search, showArchived]);
+  const archivedCount = products.filter((p) => p.archived).length;
 
   const matchingProduct = useMemo(() => {
     const key = form.name.trim().toLowerCase();
@@ -229,7 +230,7 @@ export function Inventory() {
             showArchived ? "border-brand-500 bg-brand-50 text-brand-700" : "border-gray-200 bg-white text-gray-600"
           }`}
         >
-          {showArchived ? t("inventory.showingArchived") : t("inventory.showArchived")}
+          {showArchived ? t("inventory.showingArchived") : t("inventory.showArchived")} ({archivedCount})
         </button>
       </div>
 
@@ -517,6 +518,7 @@ function IconAction({
   return (
     <button
       title={title}
+      aria-label={title}
       onClick={onClick}
       className={`cursor-pointer rounded-md border border-gray-200 p-1.5 hover:bg-gray-50 ${
         danger ? "text-red-500 hover:bg-red-50" : "text-gray-500"

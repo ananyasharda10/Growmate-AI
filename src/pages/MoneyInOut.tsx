@@ -53,6 +53,8 @@ export function MoneyInOut() {
   const [expProductId, setExpProductId] = useState("");
   const [expQty, setExpQty] = useState(1);
 
+  const [confirmOverstockOpen, setConfirmOverstockOpen] = useState(false);
+
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [editSaleError, setEditSaleError] = useState("");
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -65,7 +67,7 @@ export function MoneyInOut() {
   const moneyOut = cashPaidForExpenses(expenses) + duePaymentsTotal(dues, "supplier");
   const cash = cashOnHand(openingCashBalance, sales, expenses, dues);
 
-  async function submitSale() {
+  async function submitSale(allowOverstock = false) {
     setSaleError("");
     if (!selectedProduct) {
       setSaleError(t("money.chooseProductFirst"));
@@ -81,11 +83,17 @@ export function MoneyInOut() {
       customerName: salePayment === "credit" ? saleCustomer : undefined,
       note: saleNote || undefined,
       isQuickCash: false,
+      allowOverstock,
     });
     if (!result.ok) {
+      if (result.insufficientStock && !allowOverstock) {
+        setConfirmOverstockOpen(true);
+        return;
+      }
       setSaleError(result.error ?? t("auth.genericError"));
       return;
     }
+    setConfirmOverstockOpen(false);
     setSaleProductId("");
     setSaleQty(1);
     setSaleNote("");
@@ -218,7 +226,7 @@ export function MoneyInOut() {
                 </p>
               )}
               {saleError && <p className="text-sm text-red-600">{saleError}</p>}
-              <Button fullWidth onClick={submitSale}>
+              <Button fullWidth onClick={() => submitSale()}>
                 {t("money.recordSaleBtn")}
               </Button>
             </div>
@@ -358,6 +366,7 @@ export function MoneyInOut() {
                   <div className="flex items-center gap-3">
                     <span className="font-semibold text-brand-600">+{formatMoney(tx.sale.total, currency)}</span>
                     <RowAction
+                      label={t("common.edit")}
                       onClick={() => {
                         setEditSaleError("");
                         setEditingSale(tx.sale);
@@ -365,7 +374,7 @@ export function MoneyInOut() {
                     >
                       <Pencil size={14} />
                     </RowAction>
-                    <RowAction danger onClick={() => setDeleteSaleTarget(tx.sale)}>
+                    <RowAction label={t("common.delete")} danger onClick={() => setDeleteSaleTarget(tx.sale)}>
                       <Trash2 size={14} />
                     </RowAction>
                   </div>
@@ -380,10 +389,10 @@ export function MoneyInOut() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-semibold text-red-500">-{formatMoney(tx.expense.amount, currency)}</span>
-                    <RowAction onClick={() => setEditingExpense(tx.expense)}>
+                    <RowAction label={t("common.edit")} onClick={() => setEditingExpense(tx.expense)}>
                       <Pencil size={14} />
                     </RowAction>
-                    <RowAction danger onClick={() => setDeleteExpenseTarget(tx.expense)}>
+                    <RowAction label={t("common.delete")} danger onClick={() => setDeleteExpenseTarget(tx.expense)}>
                       <Trash2 size={14} />
                     </RowAction>
                   </div>
@@ -471,6 +480,20 @@ export function MoneyInOut() {
           setDeleteExpenseTarget(null);
         }}
         onCancel={() => setDeleteExpenseTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmOverstockOpen}
+        title={t("money.overstockConfirmTitle")}
+        message={
+          selectedProduct
+            ? t("money.overstockConfirmMsg", { stock: selectedProduct.stock, unit: t(`enums.unit.${selectedProduct.unit}`) })
+            : ""
+        }
+        confirmLabel={t("money.sellAnywayBtn")}
+        danger
+        onConfirm={() => submitSale(true)}
+        onCancel={() => setConfirmOverstockOpen(false)}
       />
     </div>
   );
@@ -625,9 +648,24 @@ function StatBlock({ icon, label, value, tone }: { icon: React.ReactNode; label:
   );
 }
 
-function RowAction({ children, onClick, danger }: { children: React.ReactNode; onClick: () => void; danger?: boolean }) {
+function RowAction({
+  children,
+  onClick,
+  danger,
+  label,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  danger?: boolean;
+  label: string;
+}) {
   return (
-    <button onClick={onClick} className={`cursor-pointer rounded-md p-1.5 hover:bg-gray-100 ${danger ? "text-red-500" : "text-gray-400"}`}>
+    <button
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className={`cursor-pointer rounded-md p-1.5 hover:bg-gray-100 ${danger ? "text-red-500" : "text-gray-400"}`}
+    >
       {children}
     </button>
   );

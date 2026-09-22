@@ -21,6 +21,10 @@ export function Analytics() {
   const speed = moveSpeed(products, sales);
 
   const hasAnyMoney = monthly.some((m) => m.moneyIn > 0 || m.moneyOut > 0);
+  const numberLocale = language === "hi" ? "hi-IN" : "en-US";
+  const moneyLocale = currency === "INR" ? "en-IN" : "en-US";
+  const formatAxisMoney = (v: number) => Number(v).toLocaleString(moneyLocale);
+  const formatAxisNumber = (v: number) => Number(v).toLocaleString(numberLocale);
 
   return (
     <div>
@@ -38,7 +42,7 @@ export function Analytics() {
             <BarChart data={monthly}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} tickFormatter={formatAxisMoney} />
               <Tooltip formatter={(v) => formatMoney(Number(v), currency)} />
               <Legend />
               <Bar name={t("analytics.legendMoneyIn")} dataKey="moneyIn" fill="#2f8f52" radius={[6, 6, 0, 0]} />
@@ -57,7 +61,7 @@ export function Analytics() {
             <ResponsiveContainer width="100%" height={Math.max(160, topSellers.length * 44)}>
               <BarChart data={topSellers.map((ts) => ({ name: ts.product.name, qty: ts.qty }))} layout="vertical" margin={{ left: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#eee" />
-                <XAxis type="number" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                <XAxis type="number" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} tickFormatter={formatAxisNumber} />
                 <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 12, fill: "#374151" }} axisLine={false} tickLine={false} />
                 <Tooltip />
                 <Bar dataKey="qty" fill="#2f8f52" radius={[0, 6, 6, 0]} barSize={22} />

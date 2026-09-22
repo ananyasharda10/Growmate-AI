@@ -156,10 +156,10 @@ export function Dues() {
                         <RotateCcw size={14} />
                       </RowIcon>
                     )}
-                    <RowIcon onClick={() => setEditTarget(d)}>
+                    <RowIcon title={t("common.edit")} onClick={() => setEditTarget(d)}>
                       <Pencil size={14} />
                     </RowIcon>
-                    <RowIcon danger onClick={() => setDeleteTarget(d)}>
+                    <RowIcon title={t("common.delete")} danger onClick={() => setDeleteTarget(d)}>
                       <Trash2 size={14} />
                     </RowIcon>
                   </div>
@@ -343,12 +343,13 @@ function RowIcon({
   children: React.ReactNode;
   onClick: () => void;
   danger?: boolean;
-  title?: string;
+  title: string;
 }) {
   return (
     <button
       onClick={onClick}
       title={title}
+      aria-label={title}
       className={`cursor-pointer rounded-md border border-gray-200 p-1.5 hover:bg-gray-50 ${danger ? "text-red-500" : "text-gray-500"}`}
     >
       {children}

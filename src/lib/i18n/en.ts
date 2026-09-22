@@ -10,6 +10,7 @@ const en = {
     pleaseWait: "Please wait...",
     dash: "—",
     confirm: "Confirm",
+    close: "Close",
   },
 
   nav: {
@@ -235,6 +236,9 @@ const en = {
     deleteExpenseMsg: "This will remove the expense and any linked supplier due.",
     chooseProductFirst: "Choose a product first.",
     onlyAvailable: "Only {{stock}} {{unit}} available.",
+    overstockConfirmTitle: "Sell more than you have in stock?",
+    overstockConfirmMsg: "Only {{stock}} {{unit}} is currently in stock. Selling this quantity anyway will bring stock down to 0 — use this for backorders or to correct a stock discrepancy.",
+    sellAnywayBtn: "Sell anyway",
     linkProductLabel: "Product (optional)",
     linkProductNone: "Not linked to a product",
     linkProductNote: "This quantity will be added to that product's stock automatically.",
