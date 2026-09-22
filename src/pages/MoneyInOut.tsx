@@ -159,9 +159,9 @@ export function MoneyInOut() {
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatBlock icon={<ArrowDownCircle size={18} />} label={t("money.moneyIn")} value={formatMoney(moneyIn, currency)} tone="green" />
-        <StatBlock icon={<ArrowUpCircle size={18} />} label={t("money.moneyOut")} value={formatMoney(moneyOut, currency)} tone="red" />
-        <StatBlock icon={<Wallet size={18} />} label={t("money.cashOnHand")} value={formatMoney(cash, currency)} tone="brand" />
+        <StatBlock icon={<ArrowDownCircle size={18} />} label={t("money.moneyIn")} value={formatMoney(moneyIn, currency)} tone="green" sub={t("money.allTimeLabel")} />
+        <StatBlock icon={<ArrowUpCircle size={18} />} label={t("money.moneyOut")} value={formatMoney(moneyOut, currency)} tone="red" sub={t("money.allTimeLabel")} />
+        <StatBlock icon={<Wallet size={18} />} label={t("money.cashOnHand")} value={formatMoney(cash, currency)} tone="brand" sub={t("money.allTimeLabel")} />
       </div>
 
       <div className="mb-4 grid grid-cols-2 rounded-lg bg-gray-100 p-1">
@@ -633,7 +633,19 @@ function EditExpenseForm({
   );
 }
 
-function StatBlock({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: string; tone: "green" | "red" | "brand" }) {
+function StatBlock({
+  icon,
+  label,
+  value,
+  tone,
+  sub,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  tone: "green" | "red" | "brand";
+  sub?: string;
+}) {
   const toneClasses = {
     green: "bg-brand-50 text-brand-700",
     red: "bg-red-50 text-red-600",
@@ -644,6 +656,7 @@ function StatBlock({ icon, label, value, tone }: { icon: React.ReactNode; label:
       <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg ${toneClasses}`}>{icon}</div>
       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
       <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+      {sub && <p className="mt-1 text-xs text-gray-400">{sub}</p>}
     </Card>
   );
 }

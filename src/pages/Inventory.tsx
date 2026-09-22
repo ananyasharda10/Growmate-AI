@@ -5,6 +5,7 @@ import {
   Clock,
   Pencil,
   Plus,
+  RotateCcw,
   Search,
   Trash2,
 } from "lucide-react";
@@ -51,6 +52,8 @@ export function Inventory() {
   const addProduct = useStore((s) => s.addProduct);
   const updateProduct = useStore((s) => s.updateProduct);
   const deleteProduct = useStore((s) => s.deleteProduct);
+  const restoreProduct = useStore((s) => s.restoreProduct);
+  const permanentlyDeleteProduct = useStore((s) => s.permanentlyDeleteProduct);
   const stockIn = useStore((s) => s.stockIn);
   const stockAdjust = useStore((s) => s.stockAdjust);
   const currency = useStore((s) => s.settings.currency);
@@ -78,6 +81,7 @@ export function Inventory() {
   const [historyTarget, setHistoryTarget] = useState<Product | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
   const [deleteResultMsg, setDeleteResultMsg] = useState<string | null>(null);
+  const [deleteForeverTarget, setDeleteForeverTarget] = useState<Product | null>(null);
 
   const visibleProducts = useMemo(() => {
     return products
@@ -298,28 +302,42 @@ export function Inventory() {
                   <td className="px-3 py-3 text-gray-500">{p.supplier || t("common.dash")}</td>
                   <td className="px-5 py-3">
                     <div className="flex items-center justify-end gap-1.5">
-                      <IconAction title={t("inventory.stockInTooltip")} onClick={() => setStockInTarget(p)}>
-                        <ArrowDownCircle size={16} />
-                      </IconAction>
-                      <IconAction
-                        title={t("inventory.adjustTooltip")}
-                        onClick={() => {
-                          setAdjustError("");
-                          setAdjustTarget(p);
-                        }}
-                      >
-                        <ArrowUpCircle size={16} />
-                      </IconAction>
-                      <IconAction title={t("inventory.historyTooltip")} onClick={() => setHistoryTarget(p)}>
-                        <Clock size={16} />
-                      </IconAction>
-                      <IconAction title={t("inventory.editTooltip")} onClick={() => openEdit(p)}>
-                        <Pencil size={16} />
-                      </IconAction>
-                      {!p.archived && (
-                        <IconAction title={t("inventory.deleteTooltip")} onClick={() => setDeleteTarget(p)} danger>
-                          <Trash2 size={16} />
-                        </IconAction>
+                      {p.archived ? (
+                        <>
+                          <IconAction title={t("inventory.historyTooltip")} onClick={() => setHistoryTarget(p)}>
+                            <Clock size={16} />
+                          </IconAction>
+                          <IconAction title={t("settings.restoreBtn")} onClick={() => restoreProduct(p.id)}>
+                            <RotateCcw size={16} />
+                          </IconAction>
+                          <IconAction title={t("settings.deleteForeverBtn")} onClick={() => setDeleteForeverTarget(p)} danger>
+                            <Trash2 size={16} />
+                          </IconAction>
+                        </>
+                      ) : (
+                        <>
+                          <IconAction title={t("inventory.stockInTooltip")} onClick={() => setStockInTarget(p)}>
+                            <ArrowDownCircle size={16} />
+                          </IconAction>
+                          <IconAction
+                            title={t("inventory.adjustTooltip")}
+                            onClick={() => {
+                              setAdjustError("");
+                              setAdjustTarget(p);
+                            }}
+                          >
+                            <ArrowUpCircle size={16} />
+                          </IconAction>
+                          <IconAction title={t("inventory.historyTooltip")} onClick={() => setHistoryTarget(p)}>
+                            <Clock size={16} />
+                          </IconAction>
+                          <IconAction title={t("inventory.editTooltip")} onClick={() => openEdit(p)}>
+                            <Pencil size={16} />
+                          </IconAction>
+                          <IconAction title={t("inventory.deleteTooltip")} onClick={() => setDeleteTarget(p)} danger>
+                            <Trash2 size={16} />
+                          </IconAction>
+                        </>
                       )}
                     </div>
                   </td>
@@ -499,6 +517,19 @@ export function Inventory() {
           setPendingLargeQty(null);
         }}
         onCancel={() => setPendingLargeQty(null)}
+      />
+
+      <ConfirmDialog
+        open={!!deleteForeverTarget}
+        title={t("settings.deleteForeverTitle")}
+        message={t("settings.deleteForeverMsg", { name: deleteForeverTarget?.name ?? "" })}
+        confirmLabel={t("settings.deleteForeverBtn")}
+        danger
+        onConfirm={() => {
+          if (deleteForeverTarget) permanentlyDeleteProduct(deleteForeverTarget.id);
+          setDeleteForeverTarget(null);
+        }}
+        onCancel={() => setDeleteForeverTarget(null)}
       />
     </div>
   );

@@ -200,6 +200,7 @@ const hi: Translations = {
     moneyIn: "पैसा अंदर",
     moneyOut: "पैसा बाहर",
     cashOnHand: "हाथ में कैश",
+    allTimeLabel: "हमेशा से अब तक",
     tabRecordSale: "बिक्री दर्ज करें",
     tabRecordExpense: "खर्च दर्ज करें",
     sellProductTitle: "उत्पाद बेचें",

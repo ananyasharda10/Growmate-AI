@@ -198,6 +198,7 @@ const en = {
     moneyIn: "Money In",
     moneyOut: "Money Out",
     cashOnHand: "Cash On Hand",
+    allTimeLabel: "All time",
     tabRecordSale: "Record sale",
     tabRecordExpense: "Record expense",
     sellProductTitle: "Sell a product",
