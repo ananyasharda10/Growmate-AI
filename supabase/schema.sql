@@ -46,6 +46,7 @@ create table if not exists sales (
   product_name text not null,
   quantity numeric not null,
   unit_price numeric not null,
+  unit_cost numeric,
   total numeric not null,
   payment_method text not null,
   customer_name text,

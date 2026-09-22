@@ -63,6 +63,7 @@ export function buildDemoData(): {
         productName: p.name,
         quantity: qty,
         unitPrice: p.sell,
+        unitCost: p.cost,
         total,
         paymentMethod: pm,
         customerName: pm === "credit" ? "Ramesh Kumar" : undefined,

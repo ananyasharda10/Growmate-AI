@@ -386,12 +386,14 @@ export const useStore = create<StoreState>()(
       const date = input.date ?? nowISO();
       const isQuickCash = input.isQuickCash ?? !input.productId;
 
+      let unitCost: number | undefined;
       if (input.productId && !isQuickCash) {
         const product = s.products.find((p) => p.id === input.productId);
         if (!product) return { ok: false, error: "Product not found." };
         if (input.quantity > product.stock) {
           return { ok: false, error: `Only ${product.stock} ${product.unit} available.` };
         }
+        unitCost = product.cost;
       }
 
       const saleId = id();
@@ -433,6 +435,7 @@ export const useStore = create<StoreState>()(
           productName: input.productName,
           quantity: input.quantity,
           unitPrice: input.unitPrice,
+          unitCost,
           total: input.total,
           paymentMethod: input.paymentMethod,
           customerName: input.customerName,

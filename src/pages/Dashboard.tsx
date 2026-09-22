@@ -25,7 +25,9 @@ import { todayISO, addDays } from "../lib/id";
 import {
   buildRestockSuggestions,
   cashOnHand,
+  cashPaidForExpenses,
   dueAmountRemaining,
+  duePaymentsTotal,
   isDueOverdue,
   isExpiringSoon,
   marginAmount,
@@ -76,10 +78,18 @@ export function Dashboard() {
 
   const slow = moveSpeed(products, sales).filter((m) => m.speed === "Slow" && m.product.stock > m.product.reorderLevel);
 
+  // Same formula as Money In/Out's "Money Out" total, so the two never disagree.
+  const moneyOutTotal = cashPaidForExpenses(expenses) + duePaymentsTotal(dues, "supplier");
+
   const profitTracked = sales.reduce((sum, s) => {
+    if (!s.productId) return sum;
+    // Use the cost recorded at the time of sale, not the product's current cost, so
+    // editing a product's price later doesn't rewrite already-recorded profit history.
+    // Older sales recorded before this field existed fall back to the current cost.
     const product = products.find((p) => p.id === s.productId);
-    if (!product) return sum;
-    return sum + marginAmount(product.cost, product.sell) * s.quantity;
+    const costAtSale = s.unitCost ?? product?.cost;
+    if (costAtSale === undefined) return sum;
+    return sum + marginAmount(costAtSale, s.unitPrice) * s.quantity;
   }, 0);
 
   type Action = { icon: React.ReactNode; tone: "red" | "amber" | "gray"; text: string; to: string };
@@ -261,7 +271,7 @@ export function Dashboard() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <MiniStat label={t("dashboard.miniRestocks")} value={formatMoney(0, currency)} />
           <MiniStat label={t("dashboard.miniProfit")} value={formatMoney(profitTracked, currency)} />
-          <MiniStat label={t("dashboard.miniExpenses")} value={formatMoney(expenses.reduce((s, e) => s + e.amount, 0), currency)} />
+          <MiniStat label={t("dashboard.miniExpenses")} value={formatMoney(moneyOutTotal, currency)} />
         </div>
         <p className="mt-3 flex items-center gap-1 text-xs text-gray-400">{t("dashboard.poweredBy")}</p>
       </Card>

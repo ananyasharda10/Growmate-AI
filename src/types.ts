@@ -59,6 +59,7 @@ export interface Sale {
   productName: string;
   quantity: number;
   unitPrice: number;
+  unitCost?: number; // product's cost at the moment of sale, so editing the product later doesn't rewrite past profit
   total: number;
   paymentMethod: PaymentMethod;
   customerName?: string; // used when paymentMethod === 'credit'
