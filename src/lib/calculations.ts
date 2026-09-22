@@ -28,13 +28,16 @@ export function duePaymentsTotal(dues: Due[], type: "customer" | "supplier"): nu
 }
 
 export function cashOnHand(openingCashBalance: number, sales: Sale[], expenses: Expense[], dues: Due[]): number {
-  return (
+  const total =
     openingCashBalance +
     cashReceivedFromSales(sales) +
     duePaymentsTotal(dues, "customer") -
     cashPaidForExpenses(expenses) -
-    duePaymentsTotal(dues, "supplier")
-  );
+    duePaymentsTotal(dues, "supplier");
+  // A single malformed record (e.g. a non-numeric amount from corrupted or hand-edited data)
+  // would otherwise NaN-poison this total, and NaN is not a rendering error — it silently
+  // formats as blank/odd text wherever "cash on hand" is shown. Never let that happen.
+  return Number.isFinite(total) ? total : 0;
 }
 
 export function salesRevenueTotal(sales: Sale[]): number {

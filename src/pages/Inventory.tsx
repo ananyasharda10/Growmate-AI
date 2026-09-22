@@ -40,6 +40,7 @@ const emptyForm = {
 const LARGE_QTY_THRESHOLD = 10000;
 const MAX_NAME_LENGTH = 100;
 const MAX_PRICE = 10_000_000;
+const MAX_DISPLAYED_DAYS = 999;
 
 export function Inventory() {
   const { t } = useT();
@@ -241,7 +242,9 @@ export function Inventory() {
               <th className="px-3 py-3">{t("inventory.colMargin")}</th>
               <th className="px-3 py-3">{t("inventory.colStock")}</th>
               <th className="px-3 py-3">{t("inventory.colReorder")}</th>
-              <th className="px-3 py-3">{t("inventory.colDaysLeft")}</th>
+              <th className="px-3 py-3" title={t("inventory.colDaysLeftHint")}>
+                {t("inventory.colDaysLeft")}
+              </th>
               <th className="px-3 py-3">{t("inventory.colSupplier")}</th>
               <th className="px-5 py-3 text-right">{t("inventory.colActions")}</th>
             </tr>
@@ -281,7 +284,13 @@ export function Inventory() {
                     {p.stock} {t(`enums.unit.${p.unit}`)}
                   </td>
                   <td className="px-3 py-3 text-gray-500">{p.reorderLevel}</td>
-                  <td className="px-3 py-3 text-gray-500">{days === null ? t("common.dash") : t("inventory.daysLeftSuffix", { days })}</td>
+                  <td className="px-3 py-3 text-gray-500">
+                    {days === null
+                      ? t("common.dash")
+                      : days > MAX_DISPLAYED_DAYS
+                      ? t("inventory.daysLeftCappedSuffix", { days: MAX_DISPLAYED_DAYS })
+                      : t("inventory.daysLeftSuffix", { days })}
+                  </td>
                   <td className="px-3 py-3 text-gray-500">{p.supplier || t("common.dash")}</td>
                   <td className="px-5 py-3">
                     <div className="flex items-center justify-end gap-1.5">
@@ -316,6 +325,7 @@ export function Inventory() {
           </tbody>
         </table>
       </Card>
+      <p className="mt-2 text-xs text-gray-400">{t("inventory.daysLeftNote")}</p>
 
       {/* Add / Edit form */}
       <Modal open={formOpen} onClose={() => setFormOpen(false)} title={editing ? t("inventory.editModalTitle") : t("inventory.addModalTitle")}>

@@ -150,6 +150,11 @@ export function Dues() {
                     <Button variant="outline" onClick={() => setSettleTarget(d)}>
                       {t("dues.settleBtn")}
                     </Button>
+                    {paid > 0 && (
+                      <RowIcon onClick={() => undoSettleDue(d.id)} title={t("dues.undoBtn")}>
+                        <RotateCcw size={14} />
+                      </RowIcon>
+                    )}
                     <RowIcon onClick={() => setEditTarget(d)}>
                       <Pencil size={14} />
                     </RowIcon>
@@ -328,9 +333,23 @@ function EditDueForm({ due, onSave, onCancel }: { due: Due; onSave: (patch: Part
   );
 }
 
-function RowIcon({ children, onClick, danger }: { children: React.ReactNode; onClick: () => void; danger?: boolean }) {
+function RowIcon({
+  children,
+  onClick,
+  danger,
+  title,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  danger?: boolean;
+  title?: string;
+}) {
   return (
-    <button onClick={onClick} className={`cursor-pointer rounded-md border border-gray-200 p-1.5 hover:bg-gray-50 ${danger ? "text-red-500" : "text-gray-500"}`}>
+    <button
+      onClick={onClick}
+      title={title}
+      className={`cursor-pointer rounded-md border border-gray-200 p-1.5 hover:bg-gray-50 ${danger ? "text-red-500" : "text-gray-500"}`}
+    >
       {children}
     </button>
   );
