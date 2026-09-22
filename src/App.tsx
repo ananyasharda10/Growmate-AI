@@ -30,6 +30,20 @@ export default function App() {
   const hydrate = useStore((s) => s.hydrate);
   const clearAllData = useStore((s) => s.clearAllData);
   const [checkingSession, setCheckingSession] = useState(true);
+  // The persisted `language` (and advisor conversation) load from localStorage
+  // asynchronously via zustand's persist middleware — without this gate, the very first
+  // render of every page uses the default "en" for one tick before snapping to the saved
+  // language, which is what showed up as headers/labels "flipping" between languages on load.
+  const [languageReady, setLanguageReady] = useState(() => useStore.persist.hasHydrated());
+
+  useEffect(() => {
+    if (languageReady) return;
+    if (useStore.persist.hasHydrated()) {
+      setLanguageReady(true);
+      return;
+    }
+    return useStore.persist.onFinishHydration(() => setLanguageReady(true));
+  }, [languageReady]);
 
   useEffect(() => {
     supabase.auth
@@ -62,7 +76,7 @@ export default function App() {
     return () => subscription.subscription.unsubscribe();
   }, [setSessionFromSupabase, hydrate, clearAllData]);
 
-  if (checkingSession) return null;
+  if (checkingSession || !languageReady) return null;
 
   return (
     <Routes>

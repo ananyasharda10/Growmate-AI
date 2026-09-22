@@ -107,6 +107,7 @@ export function buildAdvisorContext(ctx: AskContext): string {
 
   const knownCustomerNames = ctx.dues.filter((d) => d.type === "customer").map((d) => d.name);
   const knownSupplierNames = ctx.dues.filter((d) => d.type === "supplier").map((d) => d.name);
+  const knownProductNames = products.map((p) => p.name);
 
   // Same reasoning as expenseTotalsByCategory above: cash-on-hand and pending-dues totals
   // involve summing across the sales/expenses/dues history, which can run well beyond what's
@@ -133,6 +134,7 @@ export function buildAdvisorContext(ctx: AskContext): string {
     dues,
     knownCustomerNames,
     knownSupplierNames,
+    knownProductNames,
     currentCashOnHand,
     pendingCustomerDuesTotal,
     pendingSupplierDuesTotal,

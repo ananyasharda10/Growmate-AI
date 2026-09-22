@@ -5,6 +5,20 @@ function iso(daysAgo: number): string {
   return addDays(todayISO(), -daysAgo) + "T09:00:00.000Z";
 }
 
+// A fixed-seed PRNG (mulberry32) instead of Math.random(), so every "load / reset demo data"
+// click regenerates the exact same sales history and numbers — two people looking at "the
+// demo" should always see the same figures, not a new random dataset each time.
+function mulberry32(seed: number) {
+  let state = seed;
+  return function random(): number {
+    state |= 0;
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 export function buildDemoData(): {
   products: Product[];
   movements: StockMovement[];
@@ -13,6 +27,7 @@ export function buildDemoData(): {
   dues: Due[];
   settings: Partial<BusinessSettings>;
 } {
+  const random = mulberry32(20260101);
   const products: Product[] = [
     { id: "p-oil", name: "Cooking Oil", unit: "litre", cost: 20, sell: 30, stock: 3, reorderLevel: 7, supplier: "Metro Wholesale", archived: false, createdAt: iso(90) },
     { id: "p-rice", name: "Rice", unit: "kg", cost: 30, sell: 45, stock: 60, reorderLevel: 20, supplier: "Metro Wholesale", archived: false, createdAt: iso(90) },
@@ -50,9 +65,9 @@ export function buildDemoData(): {
       const rate = salesRates[p.id] ?? 0.2;
       // slow movers (soap, biscuit) skip most days
       const chance = rate >= 1 ? 0.85 : rate >= 0.5 ? 0.5 : 0.15;
-      if (Math.random() > chance) continue;
-      const qty = Math.max(1, Math.round(rate * (0.6 + Math.random() * 0.8)));
-      const pm = paymentMethods[Math.floor(Math.random() * paymentMethods.length)];
+      if (random() > chance) continue;
+      const qty = Math.max(1, Math.round(rate * (0.6 + random() * 0.8)));
+      const pm = paymentMethods[Math.floor(random() * paymentMethods.length)];
       const total = qty * p.sell;
       const saleDate = iso(day);
       const saleId = id();
