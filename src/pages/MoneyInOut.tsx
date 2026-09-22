@@ -53,6 +53,7 @@ export function MoneyInOut() {
   const [expQty, setExpQty] = useState(1);
 
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [editSaleError, setEditSaleError] = useState("");
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deleteSaleTarget, setDeleteSaleTarget] = useState<Sale | null>(null);
   const [deleteExpenseTarget, setDeleteExpenseTarget] = useState<Expense | null>(null);
@@ -127,8 +128,11 @@ export function MoneyInOut() {
   const recentTransactions = useMemo(() => {
     const s = sales.map((sale) => ({ kind: "sale" as const, date: sale.date, sale }));
     const e = expenses.map((expense) => ({ kind: "expense" as const, date: expense.date, expense }));
-    return [...s, ...e].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 25);
-  }, [sales, expenses]);
+    const d = dues.flatMap((due) =>
+      due.payments.map((payment) => ({ kind: "duePayment" as const, date: payment.date, due, payment }))
+    );
+    return [...s, ...e, ...d].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 25);
+  }, [sales, expenses, dues]);
 
   return (
     <div>
@@ -319,7 +323,20 @@ export function MoneyInOut() {
         ) : (
           <ul className="divide-y divide-gray-100">
             {recentTransactions.map((tx) =>
-              tx.kind === "sale" ? (
+              tx.kind === "duePayment" ? (
+                <li key={tx.payment.id} className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {t(tx.due.type === "customer" ? "money.duePaymentFromLabel" : "money.duePaymentToLabel", { name: tx.due.name })}
+                    </p>
+                    <p className="text-xs text-gray-400">{tx.payment.date.slice(0, 10)}</p>
+                  </div>
+                  <span className={`font-semibold ${tx.due.type === "customer" ? "text-brand-600" : "text-red-500"}`}>
+                    {tx.due.type === "customer" ? "+" : "-"}
+                    {formatMoney(tx.payment.amount, currency)}
+                  </span>
+                </li>
+              ) : tx.kind === "sale" ? (
                 <li key={tx.sale.id} className="flex items-center justify-between py-3">
                   <div>
                     <p className="text-sm font-semibold text-gray-800">{tx.sale.productName}</p>
@@ -329,7 +346,12 @@ export function MoneyInOut() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-semibold text-brand-600">+{formatMoney(tx.sale.total, currency)}</span>
-                    <RowAction onClick={() => setEditingSale(tx.sale)}>
+                    <RowAction
+                      onClick={() => {
+                        setEditSaleError("");
+                        setEditingSale(tx.sale);
+                      }}
+                    >
                       <Pencil size={14} />
                     </RowAction>
                     <RowAction danger onClick={() => setDeleteSaleTarget(tx.sale)}>
@@ -362,14 +384,30 @@ export function MoneyInOut() {
       </Card>
 
       {/* Edit sale modal */}
-      <Modal open={!!editingSale} onClose={() => setEditingSale(null)} title={t("money.editSaleTitle")}>
+      <Modal
+        open={!!editingSale}
+        onClose={() => {
+          setEditingSale(null);
+          setEditSaleError("");
+        }}
+        title={t("money.editSaleTitle")}
+      >
         {editingSale && (
           <EditSaleForm
             sale={editingSale}
             currency={currency}
-            onCancel={() => setEditingSale(null)}
+            error={editSaleError}
+            onCancel={() => {
+              setEditingSale(null);
+              setEditSaleError("");
+            }}
             onSave={(patch) => {
-              updateSale(editingSale.id, patch);
+              const result = updateSale(editingSale.id, patch);
+              if (!result.ok) {
+                setEditSaleError(result.error ?? t("auth.genericError"));
+                return;
+              }
+              setEditSaleError("");
               setEditingSale(null);
             }}
           />
@@ -422,11 +460,13 @@ export function MoneyInOut() {
 function EditSaleForm({
   sale,
   currency,
+  error,
   onSave,
   onCancel,
 }: {
   sale: Sale;
   currency: Currency;
+  error?: string;
   onSave: (patch: Partial<Sale>) => void;
   onCancel: () => void;
 }) {
@@ -465,6 +505,7 @@ function EditSaleForm({
       <p className="text-sm text-gray-500">
         {t("money.newTotalLabel", { amount: formatMoney(quantity * unitPrice, currency) })}
       </p>
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex gap-2">
         <Button variant="outline" fullWidth onClick={onCancel}>
           {t("common.cancel")}

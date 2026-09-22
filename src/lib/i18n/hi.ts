@@ -11,6 +11,7 @@ const hi: Translations = {
     gotIt: "समझ गया",
     pleaseWait: "कृपया रुकें...",
     dash: "—",
+    confirm: "पुष्टि करें",
   },
 
   nav: {
@@ -162,6 +163,9 @@ const hi: Translations = {
     deleteConfirmMsg: '"{{name}}" हमेशा के लिए हट जाएगा। अगर इसकी बिक्री या स्टॉक हिस्ट्री पहले से है, तो इसे डिलीट करने के बजाय आर्काइव कर दिया जाएगा।',
     archivedTitle: "उत्पाद आर्काइव हुआ",
     archivedMsg: "{{name}} की ट्रांज़ैक्शन हिस्ट्री होने की वजह से इसे डिलीट करने के बजाय आर्काइव कर दिया गया।",
+    invalidSellPrice: "सेल प्राइस शून्य से अधिक होनी चाहिए।",
+    largeQtyTitle: "बड़ी मात्रा की पुष्टि करें",
+    largeQtyMsg: "आपने {{qty}} दर्ज किया है। यह असामान्य रूप से बड़ी मात्रा है — क्या आप सुनिश्चित हैं कि यह सही है?",
   },
 
   money: {
@@ -211,6 +215,9 @@ const hi: Translations = {
     linkProductNone: "किसी उत्पाद से लिंक नहीं",
     linkProductNote: "यह मात्रा उस उत्पाद के स्टॉक में अपने आप जुड़ जाएगी।",
     quantityReceivedLabel: "मिली हुई मात्रा",
+    invalidQuantity: "मात्रा शून्य से अधिक होनी चाहिए।",
+    duePaymentFromLabel: "{{name}} से भुगतान मिला",
+    duePaymentToLabel: "{{name}} को भुगतान किया",
   },
 
   dues: {

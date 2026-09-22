@@ -37,6 +37,8 @@ const emptyForm = {
   supplier: "",
 };
 
+const LARGE_QTY_THRESHOLD = 10000;
+
 export function Inventory() {
   const { t } = useT();
   const products = useStore((s) => s.products);
@@ -55,6 +57,7 @@ export function Inventory() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [formError, setFormError] = useState("");
 
   const [stockInTarget, setStockInTarget] = useState<Product | null>(null);
   const [stockInQty, setStockInQty] = useState(1);
@@ -64,6 +67,8 @@ export function Inventory() {
   const [adjustType, setAdjustType] = useState<StockMovementType>("damaged");
   const [adjustQty, setAdjustQty] = useState(1);
   const [adjustNote, setAdjustNote] = useState("");
+
+  const [pendingLargeQty, setPendingLargeQty] = useState<{ type: "stockIn" | "adjust"; qty: number } | null>(null);
 
   const [historyTarget, setHistoryTarget] = useState<Product | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
@@ -78,6 +83,7 @@ export function Inventory() {
   function openAdd() {
     setEditing(null);
     setForm({ ...emptyForm, reorderLevel: defaultLowStock });
+    setFormError("");
     setFormOpen(true);
   }
 
@@ -93,6 +99,7 @@ export function Inventory() {
       expiryDate: p.expiryDate ?? "",
       supplier: p.supplier ?? "",
     });
+    setFormError("");
     setFormOpen(true);
   }
 
@@ -108,6 +115,11 @@ export function Inventory() {
       supplier: form.supplier.trim() || undefined,
     };
     if (!payload.name) return;
+    if (payload.sell <= 0) {
+      setFormError(t("inventory.invalidSellPrice"));
+      return;
+    }
+    setFormError("");
     if (editing) {
       updateProduct(editing.id, payload);
     } else {
@@ -127,6 +139,15 @@ export function Inventory() {
 
   function submitStockIn() {
     if (!stockInTarget || stockInQty <= 0) return;
+    if (stockInQty > LARGE_QTY_THRESHOLD) {
+      setPendingLargeQty({ type: "stockIn", qty: stockInQty });
+      return;
+    }
+    doStockIn();
+  }
+
+  function doStockIn() {
+    if (!stockInTarget) return;
     stockIn(stockInTarget.id, stockInQty, stockInNote || undefined);
     setStockInTarget(null);
     setStockInQty(1);
@@ -135,6 +156,15 @@ export function Inventory() {
 
   function submitAdjust() {
     if (!adjustTarget || adjustQty === 0) return;
+    if (Math.abs(adjustQty) > LARGE_QTY_THRESHOLD) {
+      setPendingLargeQty({ type: "adjust", qty: adjustQty });
+      return;
+    }
+    doAdjust();
+  }
+
+  function doAdjust() {
+    if (!adjustTarget) return;
     const delta = adjustType === "adjustment" ? adjustQty : -Math.abs(adjustQty);
     stockAdjust(adjustTarget.id, adjustType as "damaged" | "expired" | "adjustment", delta, adjustNote || undefined);
     setAdjustTarget(null);
@@ -296,6 +326,7 @@ export function Inventory() {
               <Input type="date" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} min={todayISO()} />
             </div>
           </div>
+          {formError && <p className="text-sm text-red-600">{formError}</p>}
           <Button fullWidth onClick={saveForm}>
             {editing ? t("inventory.saveChangesBtn") : t("inventory.addProductBtn")}
           </Button>
@@ -389,6 +420,19 @@ export function Inventory() {
         confirmLabel={t("common.gotIt")}
         onConfirm={() => setDeleteResultMsg(null)}
         onCancel={() => setDeleteResultMsg(null)}
+      />
+
+      <ConfirmDialog
+        open={!!pendingLargeQty}
+        title={t("inventory.largeQtyTitle")}
+        message={t("inventory.largeQtyMsg", { qty: pendingLargeQty?.qty ?? 0 })}
+        confirmLabel={t("common.confirm")}
+        onConfirm={() => {
+          if (pendingLargeQty?.type === "stockIn") doStockIn();
+          if (pendingLargeQty?.type === "adjust") doAdjust();
+          setPendingLargeQty(null);
+        }}
+        onCancel={() => setPendingLargeQty(null)}
       />
     </div>
   );

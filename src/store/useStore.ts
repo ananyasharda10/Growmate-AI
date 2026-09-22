@@ -378,6 +378,10 @@ export const useStore = create<StoreState>()(
     },
 
     recordSale: (input) => {
+      if (input.quantity <= 0) {
+        return { ok: false, error: t(get().language, "money.invalidQuantity") };
+      }
+
       const s = get();
       const date = input.date ?? nowISO();
       const isQuickCash = input.isQuickCash ?? !input.productId;
@@ -463,10 +467,14 @@ export const useStore = create<StoreState>()(
       const existing = get().sales.find((sa) => sa.id === saleId);
       if (!existing) return { ok: false, error: "Sale not found." };
 
+      const merged = { ...existing, ...input };
+      if (merged.quantity <= 0) {
+        return { ok: false, error: t(get().language, "money.invalidQuantity") };
+      }
+
       // Reverse original effects
       get().deleteSale(saleId);
 
-      const merged = { ...existing, ...input };
       return get().recordSale({
         productId: merged.productId,
         productName: merged.productName,

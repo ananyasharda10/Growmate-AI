@@ -9,6 +9,7 @@ const en = {
     gotIt: "Got it",
     pleaseWait: "Please wait...",
     dash: "—",
+    confirm: "Confirm",
   },
 
   nav: {
@@ -160,6 +161,9 @@ const en = {
     deleteConfirmMsg: 'This will permanently remove "{{name}}". If it already has sales or stock history, it will be archived instead.',
     archivedTitle: "Product archived",
     archivedMsg: "{{name}} has transaction history, so it was archived instead of deleted.",
+    invalidSellPrice: "Sell price must be greater than zero.",
+    largeQtyTitle: "Confirm large quantity",
+    largeQtyMsg: "You entered {{qty}}. This is an unusually large quantity — are you sure this is correct?",
   },
 
   money: {
@@ -209,6 +213,9 @@ const en = {
     linkProductNone: "Not linked to a product",
     linkProductNote: "This quantity will be added to that product's stock automatically.",
     quantityReceivedLabel: "Quantity received",
+    invalidQuantity: "Quantity must be greater than zero.",
+    duePaymentFromLabel: "Payment received from {{name}}",
+    duePaymentToLabel: "Payment made to {{name}}",
   },
 
   dues: {
