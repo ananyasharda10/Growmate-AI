@@ -11,6 +11,7 @@ import { Dues } from "./pages/Dues";
 import { Analytics } from "./pages/Analytics";
 import { AIAdvisor } from "./pages/AIAdvisor";
 import { Settings } from "./pages/Settings";
+import { NotFound } from "./pages/NotFound";
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const session = useStore((s) => s.session);
@@ -70,14 +71,15 @@ export default function App() {
         }
       >
         <Route index element={<Dashboard />} />
+        <Route path="dashboard" element={<Dashboard />} />
         <Route path="inventory" element={<Inventory />} />
         <Route path="money" element={<MoneyInOut />} />
         <Route path="dues" element={<Dues />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="advisor" element={<AIAdvisor />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="*" element={<NotFound />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

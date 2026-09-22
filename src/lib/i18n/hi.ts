@@ -431,6 +431,12 @@ const hi: Translations = {
       adjustment: "एडजस्टमेंट",
     },
   },
+
+  notFound: {
+    title: "पेज नहीं मिला",
+    subtitle: "जो पेज आप ढूंढ रहे हैं वह मौजूद नहीं है या शायद हट गया है।",
+    backBtn: "डैशबोर्ड पर वापस जाएं",
+  },
 };
 
 export default hi;

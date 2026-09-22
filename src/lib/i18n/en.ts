@@ -429,6 +429,12 @@ const en = {
       adjustment: "Adjustment",
     },
   },
+
+  notFound: {
+    title: "Page not found",
+    subtitle: "The page you're looking for doesn't exist or may have moved.",
+    backBtn: "Back to Dashboard",
+  },
 };
 
 export default en;
