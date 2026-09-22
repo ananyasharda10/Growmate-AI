@@ -16,6 +16,7 @@ import { Badge } from "../components/ui/Badge";
 import { Modal, ConfirmDialog } from "../components/ui/Modal";
 import { Input, Label, NumberInput, Select, Textarea } from "../components/ui/Field";
 import { formatMoney } from "../lib/currency";
+import { formatDate } from "../lib/dateFormat";
 import { UNITS, type Product, type StockMovementType, type Unit } from "../types";
 import {
   avgDailySalesQty,
@@ -43,7 +44,7 @@ const MAX_PRICE = 10_000_000;
 const MAX_DISPLAYED_DAYS = 999;
 
 export function Inventory() {
-  const { t } = useT();
+  const { t, language } = useT();
   const products = useStore((s) => s.products);
   const sales = useStore((s) => s.sales);
   const movements = useStore((s) => s.movements);
@@ -275,7 +276,9 @@ export function Inventory() {
                       {!expired && expSoon && <Badge tone="amber">{t("inventory.badgeExpiresSoon")}</Badge>}
                       {p.archived && <Badge tone="gray">{t("inventory.badgeArchived")}</Badge>}
                     </div>
-                    {p.expiryDate && <p className="mt-0.5 text-xs text-gray-400">{t("inventory.expiresLabel", { date: p.expiryDate })}</p>}
+                    {p.expiryDate && (
+                      <p className="mt-0.5 text-xs text-gray-400">{t("inventory.expiresLabel", { date: formatDate(p.expiryDate, language) })}</p>
+                    )}
                   </td>
                   <td className="px-3 py-3 text-gray-600">{formatMoney(p.cost, currency)}</td>
                   <td className="px-3 py-3 text-gray-600">{formatMoney(p.sell, currency)}</td>
@@ -451,7 +454,7 @@ export function Inventory() {
               <li key={m.id} className="flex items-center justify-between py-2.5 text-sm">
                 <div>
                   <p className="font-medium text-gray-700">{t(`enums.movementType.${m.type}`)}</p>
-                  <p className="text-xs text-gray-400">{new Date(m.date).toLocaleDateString()} {m.note ? `· ${m.note}` : ""}</p>
+                  <p className="text-xs text-gray-400">{formatDate(m.date, language)} {m.note ? `· ${m.note}` : ""}</p>
                 </div>
                 <span className={`font-semibold ${m.quantity >= 0 ? "text-brand-600" : "text-red-500"}`}>
                   {m.quantity >= 0 ? "+" : ""}

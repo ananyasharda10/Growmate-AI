@@ -28,7 +28,6 @@ const en = {
   auth: {
     welcomeTitle: "Welcome to {{appName}}",
     subtitle: "Sign in to manage your business",
-    accessAccount: "Access your account",
     signIn: "Sign in",
     signUp: "Sign up",
     emailLabel: "Email",
@@ -94,6 +93,7 @@ const en = {
     shareSummary: "Share summary",
     weekSales: "This week's sales",
     noSalesWeek: "No sales recorded this week yet.",
+    chartSalesLabel: "Sales",
     topSellersWeek: "Top sellers this week",
     runningLow: "Running low",
     itemsCount: "{{count}} item{{s}}",

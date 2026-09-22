@@ -66,8 +66,6 @@ export function Auth() {
         </div>
 
         <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-base font-semibold text-gray-900">{t("auth.accessAccount")}</h2>
-
           <div className="mb-4 grid grid-cols-2 rounded-lg bg-gray-100 p-1">
             <button
               type="button"

@@ -7,12 +7,13 @@ import { Button } from "../components/ui/Button";
 import { Modal, ConfirmDialog } from "../components/ui/Modal";
 import { Input, Label, NumberInput, Select, Textarea } from "../components/ui/Field";
 import { formatMoney } from "../lib/currency";
+import { formatDate } from "../lib/dateFormat";
 import { cashOnHand, cashPaidForExpenses, cashReceivedFromSales, duePaymentsTotal } from "../lib/calculations";
 import { PAYMENT_METHODS, EXPENSE_CATEGORY_VALUES, type Currency, type Expense, type ExpenseCategory, type PaymentMethod, type Sale } from "../types";
 import { localDateOf, nowISO } from "../lib/id";
 
 export function MoneyInOut() {
-  const { t } = useT();
+  const { t, language } = useT();
   const allProducts = useStore((s) => s.products);
   const products = useMemo(() => allProducts.filter((p) => !p.archived), [allProducts]);
   const sales = useStore((s) => s.sales);
@@ -337,7 +338,7 @@ export function MoneyInOut() {
                     <p className="text-sm font-semibold text-gray-800">
                       {t(tx.due.type === "customer" ? "money.duePaymentFromLabel" : "money.duePaymentToLabel", { name: tx.due.name })}
                     </p>
-                    <p className="text-xs text-gray-400">{tx.payment.date.slice(0, 10)}</p>
+                    <p className="text-xs text-gray-400">{formatDate(tx.payment.date, language)}</p>
                   </div>
                   <span className={`font-semibold ${tx.due.type === "customer" ? "text-brand-600" : "text-red-500"}`}>
                     {tx.due.type === "customer" ? "+" : "-"}
@@ -351,7 +352,7 @@ export function MoneyInOut() {
                       {tx.sale.isQuickCash ? t("money.cashSaleLabel") : tx.sale.productName}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {localDateOf(tx.sale.date)} · {tx.sale.quantity} × {formatMoney(tx.sale.unitPrice, currency)} · {t(`enums.paymentMethod.${tx.sale.paymentMethod}`)}
+                      {formatDate(localDateOf(tx.sale.date), language)} · {tx.sale.quantity} × {formatMoney(tx.sale.unitPrice, currency)} · {t(`enums.paymentMethod.${tx.sale.paymentMethod}`)}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -374,7 +375,7 @@ export function MoneyInOut() {
                   <div>
                     <p className="text-sm font-semibold text-gray-800">{t(`enums.expenseCategory.${tx.expense.category}`)}</p>
                     <p className="text-xs text-gray-400">
-                      {localDateOf(tx.expense.date)} · {t(`enums.paymentMethod.${tx.expense.paymentMethod}`)} {tx.expense.note ? `· ${tx.expense.note}` : ""}
+                      {formatDate(localDateOf(tx.expense.date), language)} · {t(`enums.paymentMethod.${tx.expense.paymentMethod}`)} {tx.expense.note ? `· ${tx.expense.note}` : ""}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">

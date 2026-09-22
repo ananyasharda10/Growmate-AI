@@ -8,12 +8,13 @@ import { Badge } from "../components/ui/Badge";
 import { Modal, ConfirmDialog } from "../components/ui/Modal";
 import { Input, Label, NumberInput, Textarea } from "../components/ui/Field";
 import { formatMoney } from "../lib/currency";
+import { formatDate } from "../lib/dateFormat";
 import { dueAmountPaid, dueAmountRemaining, isDueOverdue } from "../lib/calculations";
 import type { Due, DueType } from "../types";
 import { todayISO } from "../lib/id";
 
 export function Dues() {
-  const { t } = useT();
+  const { t, language } = useT();
   const dues = useStore((s) => s.dues);
   const currency = useStore((s) => s.settings.currency);
   const addDue = useStore((s) => s.addDue);
@@ -138,7 +139,7 @@ export function Dues() {
                       {d.status === "partial" && <Badge tone="amber">{t("dues.partialBadge")}</Badge>}
                     </div>
                     <p className="text-xs text-gray-400">
-                      {d.dueDate ? t("dues.dueDateLabel", { date: d.dueDate }) : t("dues.noDueDate")} ·{" "}
+                      {d.dueDate ? t("dues.dueDateLabel", { date: formatDate(d.dueDate, language) }) : t("dues.noDueDate")} ·{" "}
                       {t("dues.paidOfLabel", { paid: formatMoney(paid, currency), total: formatMoney(d.originalAmount, currency) })}
                     </p>
                   </div>
@@ -179,7 +180,7 @@ export function Dues() {
               <li key={d.id} className="flex items-center justify-between py-3">
                 <div>
                   <p className="text-sm font-semibold text-gray-400 line-through">{d.name}</p>
-                  <p className="text-xs text-gray-400">{d.settledAt?.slice(0, 10)}</p>
+                  <p className="text-xs text-gray-400">{d.settledAt ? formatDate(d.settledAt, language) : ""}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-gray-400">{formatMoney(d.originalAmount, currency)}</span>

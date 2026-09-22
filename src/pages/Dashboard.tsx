@@ -13,7 +13,7 @@ import {
   UserPlus,
   Wallet,
 } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useStore } from "../store/useStore";
 import { useT } from "../lib/i18n/useT";
 import { Card } from "../components/ui/Card";
@@ -21,6 +21,7 @@ import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { OnboardingChecklist } from "../components/Onboarding";
 import { formatMoney } from "../lib/currency";
+import { formatDate } from "../lib/dateFormat";
 import { todayISO, addDays, localDateOf } from "../lib/id";
 import {
   buildRestockSuggestions,
@@ -178,7 +179,7 @@ export function Dashboard() {
   const overdueCustomerTotal = pendingCustomerDues.filter((d) => isDueOverdue(d)).reduce((s, d) => s + dueAmountRemaining(d), 0);
 
   const summaryLines = [
-    t("dashboard.summaryToday", { date: today }),
+    t("dashboard.summaryToday", { date: formatDate(today, language) }),
     t("dashboard.summarySales", { amount: formatMoney(todaysSalesTotal, currency) }),
     t("dashboard.summaryCashReceived", { amount: formatMoney(cashReceivedToday, currency) }),
     t("dashboard.summaryExpenses", { amount: formatMoney(expensesToday, currency) }),
@@ -298,13 +299,20 @@ export function Dashboard() {
           {weekData.every((d) => d.total === 0) ? (
             <EmptyState text={t("dashboard.noSalesWeek")} />
           ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={weekData}>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={weekData} margin={{ top: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
                 <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
-                <Tooltip formatter={(v) => formatMoney(Number(v), currency)} />
-                <Bar dataKey="total" fill="#2f8f52" radius={[6, 6, 0, 0]} />
+                <Tooltip formatter={(v) => [formatMoney(Number(v), currency), t("dashboard.chartSalesLabel")]} />
+                <Bar dataKey="total" name={t("dashboard.chartSalesLabel")} fill="#2f8f52" radius={[6, 6, 0, 0]}>
+                  <LabelList
+                    dataKey="total"
+                    position="top"
+                    formatter={(v) => (typeof v === "number" && v > 0 ? formatMoney(v, currency) : "")}
+                    style={{ fontSize: 11, fill: "#374151" }}
+                  />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -367,7 +375,7 @@ export function Dashboard() {
                     <p className="text-sm font-semibold text-gray-800">{p.name}</p>
                     <p className="text-xs text-gray-500">{t("dashboard.inStockSuffix", { stock: p.stock, unit: t(`enums.unit.${p.unit}`) })}</p>
                   </div>
-                  <Badge tone="amber">{t("dashboard.expiresOn", { date: p.expiryDate ?? "" })}</Badge>
+                  <Badge tone="amber">{t("dashboard.expiresOn", { date: formatDate(p.expiryDate ?? "", language) })}</Badge>
                 </li>
               ))}
             </ul>

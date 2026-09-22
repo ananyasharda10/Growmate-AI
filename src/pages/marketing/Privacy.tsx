@@ -1,5 +1,6 @@
 import { MarketingLayout } from "../../components/MarketingLayout";
 import { useT } from "../../lib/i18n/useT";
+import { formatDate } from "../../lib/dateFormat";
 
 const SECTIONS = [
   "infoWeCollect",
@@ -12,12 +13,12 @@ const SECTIONS = [
 ] as const;
 
 export function Privacy() {
-  const { t } = useT();
+  const { t, language } = useT();
 
   return (
     <MarketingLayout>
       <h1 className="text-3xl font-bold text-gray-900">{t("marketing.privacyTitle")}</h1>
-      <p className="mt-2 text-sm text-gray-400">{t("marketing.lastUpdated", { date: "2026-09-22" })}</p>
+      <p className="mt-2 text-sm text-gray-400">{t("marketing.lastUpdated", { date: formatDate("2026-09-22", language) })}</p>
 
       <div className="mt-8 space-y-7">
         {SECTIONS.map((key) => (

@@ -30,7 +30,6 @@ const hi: Translations = {
   auth: {
     welcomeTitle: "{{appName}} में आपका स्वागत है",
     subtitle: "अपना बिज़नेस मैनेज करने के लिए साइन इन करें",
-    accessAccount: "अपने अकाउंट में जाएं",
     signIn: "साइन इन",
     signUp: "साइन अप",
     emailLabel: "ईमेल",
@@ -96,6 +95,7 @@ const hi: Translations = {
     shareSummary: "सारांश शेयर करें",
     weekSales: "इस हफ्ते की बिक्री",
     noSalesWeek: "इस हफ्ते अभी तक कोई बिक्री दर्ज नहीं हुई।",
+    chartSalesLabel: "बिक्री",
     topSellersWeek: "इस हफ्ते के टॉप सेलर",
     runningLow: "स्टॉक कम हो रहा है",
     itemsCount: "{{count}} आइटम",
