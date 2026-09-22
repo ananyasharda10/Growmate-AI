@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { Download, RefreshCcw } from "lucide-react";
+import { Download, RefreshCcw, RotateCcw, Trash2 } from "lucide-react";
 import { useStore } from "../store/useStore";
 import { useT } from "../lib/i18n/useT";
 import { supabase } from "../lib/supabaseClient";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import { Input, Label, Select } from "../components/ui/Field";
+import { Input, Label, NumberInput, Select } from "../components/ui/Field";
 import { ConfirmDialog } from "../components/ui/Modal";
 import { LanguageToggle } from "../components/LanguageToggle";
-import { BUSINESS_TYPE_VALUES, type BusinessType, type Currency } from "../types";
+import { BUSINESS_TYPE_VALUES, type BusinessType, type Currency, type Product } from "../types";
 
 function downloadCSV(filename: string, rows: (string | number | undefined)[][]) {
   const csv = rows.map((row) => row.map((cell) => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -32,20 +32,31 @@ export function Settings() {
   const expenses = useStore((s) => s.expenses);
   const dues = useStore((s) => s.dues);
   const resetDemoData = useStore((s) => s.resetDemoData);
+  const restoreProduct = useStore((s) => s.restoreProduct);
+  const permanentlyDeleteProduct = useStore((s) => s.permanentlyDeleteProduct);
 
   const [businessName, setBusinessName] = useState(settings.businessName);
   const [businessType, setBusinessType] = useState<BusinessType>(settings.businessType);
   const [currency, setCurrency] = useState<Currency>(settings.currency);
   const [lowStock, setLowStock] = useState(settings.defaultLowStockLevel);
   const [opening, setOpening] = useState(settings.openingCashBalance);
+  const [businessError, setBusinessError] = useState("");
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordMsg, setPasswordMsg] = useState("");
 
   const [confirmDemoReset, setConfirmDemoReset] = useState(false);
+  const [deleteForeverTarget, setDeleteForeverTarget] = useState<Product | null>(null);
+
+  const archivedProducts = products.filter((p) => p.archived);
 
   function saveBusiness() {
+    if (lowStock < 0 || opening < 0) {
+      setBusinessError(t("settings.invalidNegativeValue"));
+      return;
+    }
+    setBusinessError("");
     updateSettings({
       businessName: businessName.trim() || "My Business",
       businessType,
@@ -140,13 +151,14 @@ export function Settings() {
           </div>
           <div>
             <Label>{t("settings.defaultLowStockLabel")}</Label>
-            <Input type="number" value={lowStock} onChange={(e) => setLowStock(Number(e.target.value))} />
+            <NumberInput value={lowStock} onChange={setLowStock} />
           </div>
           <div>
             <Label>{t("settings.openingCashLabel")}</Label>
-            <Input type="number" value={opening} onChange={(e) => setOpening(Number(e.target.value))} />
+            <NumberInput value={opening} onChange={setOpening} />
           </div>
         </div>
+        {businessError && <p className="mt-2 text-sm text-red-600">{businessError}</p>}
         <Button className="mt-4" onClick={saveBusiness}>
           {t("settings.saveChangesBtn")}
         </Button>
@@ -168,6 +180,30 @@ export function Settings() {
         <Button className="mt-4" onClick={updatePassword}>
           {t("settings.updatePasswordBtn")}
         </Button>
+      </Card>
+
+      <Card className="mb-6 p-6">
+        <h2 className="mb-1 text-base font-semibold text-gray-900">{t("settings.archivedProductsTitle")}</h2>
+        <p className="mb-4 text-sm text-gray-500">{t("settings.archivedProductsSubtitle")}</p>
+        {archivedProducts.length === 0 ? (
+          <p className="py-4 text-center text-sm text-gray-400">{t("settings.noArchivedProducts")}</p>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {archivedProducts.map((p) => (
+              <li key={p.id} className="flex items-center justify-between py-3">
+                <p className="text-sm font-semibold text-gray-800">{p.name}</p>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" icon={<RotateCcw size={14} />} onClick={() => restoreProduct(p.id)}>
+                    {t("settings.restoreBtn")}
+                  </Button>
+                  <Button variant="outline" icon={<Trash2 size={14} />} onClick={() => setDeleteForeverTarget(p)}>
+                    {t("settings.deleteForeverBtn")}
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       <Card className="p-6">
@@ -194,6 +230,19 @@ export function Settings() {
           setConfirmDemoReset(false);
         }}
         onCancel={() => setConfirmDemoReset(false)}
+      />
+
+      <ConfirmDialog
+        open={!!deleteForeverTarget}
+        title={t("settings.deleteForeverTitle")}
+        message={t("settings.deleteForeverMsg", { name: deleteForeverTarget?.name ?? "" })}
+        confirmLabel={t("settings.deleteForeverBtn")}
+        danger
+        onConfirm={() => {
+          if (deleteForeverTarget) permanentlyDeleteProduct(deleteForeverTarget.id);
+          setDeleteForeverTarget(null);
+        }}
+        onCancel={() => setDeleteForeverTarget(null)}
       />
     </div>
   );

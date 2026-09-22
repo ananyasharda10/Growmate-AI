@@ -5,7 +5,7 @@ import { useT } from "../lib/i18n/useT";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Modal, ConfirmDialog } from "../components/ui/Modal";
-import { Input, Label, Select, Textarea } from "../components/ui/Field";
+import { Input, Label, NumberInput, Select, Textarea } from "../components/ui/Field";
 import { formatMoney } from "../lib/currency";
 import { cashOnHand, cashPaidForExpenses, cashReceivedFromSales, duePaymentsTotal } from "../lib/calculations";
 import { PAYMENT_METHODS, EXPENSE_CATEGORY_VALUES, type Currency, type Expense, type ExpenseCategory, type PaymentMethod, type Sale } from "../types";
@@ -180,7 +180,7 @@ export function MoneyInOut() {
               </div>
               <div>
                 <Label>{t("money.quantitySoldLabel")}</Label>
-                <Input type="number" min={1} value={saleQty} onChange={(e) => setSaleQty(Number(e.target.value))} />
+                <NumberInput value={saleQty} onChange={setSaleQty} />
               </div>
               <div>
                 <Label>{t("money.paymentMethodLabel")}</Label>
@@ -220,7 +220,7 @@ export function MoneyInOut() {
             <div className="space-y-4">
               <div>
                 <Label>{t("money.totalAmountLabel")}</Label>
-                <Input type="number" value={quickAmount} onChange={(e) => setQuickAmount(Number(e.target.value))} />
+                <NumberInput value={quickAmount} onChange={setQuickAmount} />
               </div>
               <div>
                 <Label>{t("money.paymentMethodLabel")}</Label>
@@ -250,7 +250,7 @@ export function MoneyInOut() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label>{t("money.amountLabel")}</Label>
-              <Input type="number" value={expAmount} onChange={(e) => setExpAmount(Number(e.target.value))} />
+              <NumberInput value={expAmount} onChange={setExpAmount} />
             </div>
             <div>
               <Label>{t("money.categoryLabel")}</Label>
@@ -294,7 +294,7 @@ export function MoneyInOut() {
                 {expProductId && (
                   <div>
                     <Label>{t("money.quantityReceivedLabel")}</Label>
-                    <Input type="number" min={1} value={expQty} onChange={(e) => setExpQty(Number(e.target.value))} />
+                    <NumberInput value={expQty} onChange={setExpQty} />
                   </div>
                 )}
               </>
@@ -339,7 +339,9 @@ export function MoneyInOut() {
               ) : tx.kind === "sale" ? (
                 <li key={tx.sale.id} className="flex items-center justify-between py-3">
                   <div>
-                    <p className="text-sm font-semibold text-gray-800">{tx.sale.productName}</p>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {tx.sale.isQuickCash ? t("money.cashSaleLabel") : tx.sale.productName}
+                    </p>
                     <p className="text-xs text-gray-400">
                       {tx.sale.date.slice(0, 10)} · {tx.sale.quantity} × {formatMoney(tx.sale.unitPrice, currency)} · {t(`enums.paymentMethod.${tx.sale.paymentMethod}`)}
                     </p>
@@ -481,11 +483,11 @@ function EditSaleForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>{t("money.quantitySoldLabel")}</Label>
-          <Input type="number" min={1} value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} />
+          <NumberInput value={quantity} onChange={setQuantity} />
         </div>
         <div>
           <Label>{t("inventory.sellPriceLabel")}</Label>
-          <Input type="number" value={unitPrice} onChange={(e) => setUnitPrice(Number(e.target.value))} />
+          <NumberInput value={unitPrice} onChange={setUnitPrice} />
         </div>
       </div>
       <div>
@@ -537,12 +539,13 @@ function EditExpenseForm({
   const [category, setCategory] = useState<ExpenseCategory>(expense.category);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(expense.paymentMethod);
   const [note, setNote] = useState(expense.note ?? "");
+  const [error, setError] = useState("");
 
   return (
     <div className="space-y-4">
       <div>
         <Label>{t("money.amountLabel")}</Label>
-        <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
+        <NumberInput value={amount} onChange={setAmount} />
       </div>
       <div>
         <Label>{t("money.categoryLabel")}</Label>
@@ -568,11 +571,21 @@ function EditExpenseForm({
         <Label>{t("dues.noteLabel")}</Label>
         <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
       </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex gap-2">
         <Button variant="outline" fullWidth onClick={onCancel}>
           {t("common.cancel")}
         </Button>
-        <Button fullWidth onClick={() => onSave({ amount, category, paymentMethod, note: note || undefined, date: nowISO() })}>
+        <Button
+          fullWidth
+          onClick={() => {
+            if (amount <= 0) {
+              setError(t("money.invalidAmount"));
+              return;
+            }
+            onSave({ amount, category, paymentMethod, note: note || undefined, date: nowISO() });
+          }}
+        >
           {t("money.saveChangesBtn")}
         </Button>
       </div>

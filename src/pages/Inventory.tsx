@@ -14,7 +14,7 @@ import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { Modal, ConfirmDialog } from "../components/ui/Modal";
-import { Input, Label, Select, Textarea } from "../components/ui/Field";
+import { Input, Label, NumberInput, Select, Textarea } from "../components/ui/Field";
 import { formatMoney } from "../lib/currency";
 import { UNITS, type Product, type StockMovementType, type Unit } from "../types";
 import {
@@ -80,6 +80,12 @@ export function Inventory() {
       .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
   }, [products, search, showArchived]);
 
+  const matchingProduct = useMemo(() => {
+    const key = form.name.trim().toLowerCase();
+    if (!key) return undefined;
+    return products.find((p) => !p.archived && p.id !== editing?.id && p.name.trim().toLowerCase() === key);
+  }, [form.name, products, editing]);
+
   function openAdd() {
     setEditing(null);
     setForm({ ...emptyForm, reorderLevel: defaultLowStock });
@@ -117,6 +123,10 @@ export function Inventory() {
     if (!payload.name) return;
     if (payload.sell <= 0) {
       setFormError(t("inventory.invalidSellPrice"));
+      return;
+    }
+    if (payload.cost < 0 || payload.stock < 0 || payload.reorderLevel < 0) {
+      setFormError(t("inventory.invalidNegativeValue"));
       return;
     }
     setFormError("");
@@ -249,7 +259,7 @@ export function Inventory() {
                     {p.stock} {t(`enums.unit.${p.unit}`)}
                   </td>
                   <td className="px-3 py-3 text-gray-500">{p.reorderLevel}</td>
-                  <td className="px-3 py-3 text-gray-500">{days === null ? t("common.dash") : `${days}d`}</td>
+                  <td className="px-3 py-3 text-gray-500">{days === null ? t("common.dash") : t("inventory.daysLeftSuffix", { days })}</td>
                   <td className="px-3 py-3 text-gray-500">{p.supplier || t("common.dash")}</td>
                   <td className="px-5 py-3">
                     <div className="flex items-center justify-end gap-1.5">
@@ -286,6 +296,11 @@ export function Inventory() {
             <Label>{t("inventory.productNameLabel")}</Label>
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
+          {matchingProduct && (
+            <p className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              {t("inventory.duplicateNameNotice", { name: matchingProduct.name })}
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>{t("inventory.unitLabel")}</Label>
@@ -303,23 +318,19 @@ export function Inventory() {
             </div>
             <div>
               <Label>{t("inventory.costPriceLabel")}</Label>
-              <Input type="number" value={form.cost} onChange={(e) => setForm({ ...form, cost: Number(e.target.value) })} />
+              <NumberInput value={form.cost} onChange={(cost) => setForm({ ...form, cost })} />
             </div>
             <div>
               <Label>{t("inventory.sellPriceLabel")}</Label>
-              <Input type="number" value={form.sell} onChange={(e) => setForm({ ...form, sell: Number(e.target.value) })} />
+              <NumberInput value={form.sell} onChange={(sell) => setForm({ ...form, sell })} />
             </div>
             <div>
               <Label>{t("inventory.stockLabel")}</Label>
-              <Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} />
+              <NumberInput value={form.stock} onChange={(stock) => setForm({ ...form, stock })} />
             </div>
             <div>
               <Label>{t("inventory.reorderLevelLabel")}</Label>
-              <Input
-                type="number"
-                value={form.reorderLevel}
-                onChange={(e) => setForm({ ...form, reorderLevel: Number(e.target.value) })}
-              />
+              <NumberInput value={form.reorderLevel} onChange={(reorderLevel) => setForm({ ...form, reorderLevel })} />
             </div>
             <div className="col-span-2">
               <Label>{t("inventory.expiryDateOptionalLabel")}</Label>
@@ -328,7 +339,7 @@ export function Inventory() {
           </div>
           {formError && <p className="text-sm text-red-600">{formError}</p>}
           <Button fullWidth onClick={saveForm}>
-            {editing ? t("inventory.saveChangesBtn") : t("inventory.addProductBtn")}
+            {matchingProduct ? t("inventory.createSeparateBtn") : editing ? t("inventory.saveChangesBtn") : t("inventory.addProductBtn")}
           </Button>
         </div>
       </Modal>
@@ -338,7 +349,7 @@ export function Inventory() {
         <div className="space-y-4">
           <div>
             <Label>{t("inventory.quantityUnitLabel", { unit: stockInTarget ? t(`enums.unit.${stockInTarget.unit}`) : "" })}</Label>
-            <Input type="number" min={1} value={stockInQty} onChange={(e) => setStockInQty(Number(e.target.value))} />
+            <NumberInput value={stockInQty} onChange={setStockInQty} />
           </div>
           <div>
             <Label>{t("inventory.noteOptionalLabel")}</Label>
@@ -367,7 +378,7 @@ export function Inventory() {
                 ? t("inventory.changeQtyLabel")
                 : t("inventory.quantityUnitLabel", { unit: adjustTarget ? t(`enums.unit.${adjustTarget.unit}`) : "" })}
             </Label>
-            <Input type="number" value={adjustQty} onChange={(e) => setAdjustQty(Number(e.target.value))} />
+            <NumberInput value={adjustQty} onChange={setAdjustQty} />
           </div>
           <div>
             <Label>{t("inventory.noteOptionalLabel")}</Label>

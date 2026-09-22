@@ -166,6 +166,10 @@ const hi: Translations = {
     invalidSellPrice: "सेल प्राइस शून्य से अधिक होनी चाहिए।",
     largeQtyTitle: "बड़ी मात्रा की पुष्टि करें",
     largeQtyMsg: "आपने {{qty}} दर्ज किया है। यह असामान्य रूप से बड़ी मात्रा है — क्या आप सुनिश्चित हैं कि यह सही है?",
+    invalidNegativeValue: "ये वैल्यू नेगेटिव नहीं हो सकतीं।",
+    daysLeftSuffix: "{{days}} दिन",
+    duplicateNameNotice: '"{{name}}" नाम का उत्पाद पहले से मौजूद है।',
+    createSeparateBtn: "फिर भी जोड़ें",
   },
 
   money: {
@@ -216,6 +220,8 @@ const hi: Translations = {
     linkProductNote: "यह मात्रा उस उत्पाद के स्टॉक में अपने आप जुड़ जाएगी।",
     quantityReceivedLabel: "मिली हुई मात्रा",
     invalidQuantity: "मात्रा शून्य से अधिक होनी चाहिए।",
+    invalidAmount: "राशि शून्य से अधिक होनी चाहिए।",
+    cashSaleLabel: "कैश सेल",
     duePaymentFromLabel: "{{name}} से भुगतान मिला",
     duePaymentToLabel: "{{name}} को भुगतान किया",
   },
@@ -350,6 +356,14 @@ const hi: Translations = {
     confirmResetMsg: "इससे मौजूदा सभी उत्पाद, बिक्री, खर्च और बकाया एक असली जैसे डेमो डेटासेट से बदल जाएंगे। इसे पूर्ववत नहीं किया जा सकता।",
     resetBtn: "रीसेट करें",
     languageLabel: "भाषा",
+    invalidNegativeValue: "ये वैल्यू नेगेटिव नहीं हो सकतीं।",
+    archivedProductsTitle: "आर्काइव किए गए उत्पाद",
+    archivedProductsSubtitle: "ऐसे उत्पाद जिन्हें डिलीट करने के बजाय आर्काइव किया गया, क्योंकि उनकी बिक्री या स्टॉक हिस्ट्री है।",
+    noArchivedProducts: "कोई आर्काइव किया गया उत्पाद नहीं है।",
+    restoreBtn: "वापस लाएं",
+    deleteForeverBtn: "हमेशा के लिए डिलीट करें",
+    deleteForeverTitle: "इस उत्पाद को हमेशा के लिए डिलीट करें?",
+    deleteForeverMsg: '"{{name}}" और इसकी स्टॉक हिस्ट्री हमेशा के लिए हट जाएगी। इसे पूर्ववत नहीं किया जा सकता।',
   },
 
   onboarding: {

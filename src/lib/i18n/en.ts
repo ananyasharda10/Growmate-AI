@@ -164,6 +164,10 @@ const en = {
     invalidSellPrice: "Sell price must be greater than zero.",
     largeQtyTitle: "Confirm large quantity",
     largeQtyMsg: "You entered {{qty}}. This is an unusually large quantity — are you sure this is correct?",
+    invalidNegativeValue: "These values can't be negative.",
+    daysLeftSuffix: "{{days}}d",
+    duplicateNameNotice: 'A product named "{{name}}" already exists.',
+    createSeparateBtn: "Add anyway",
   },
 
   money: {
@@ -214,6 +218,8 @@ const en = {
     linkProductNote: "This quantity will be added to that product's stock automatically.",
     quantityReceivedLabel: "Quantity received",
     invalidQuantity: "Quantity must be greater than zero.",
+    invalidAmount: "Amount must be greater than zero.",
+    cashSaleLabel: "Cash sale",
     duePaymentFromLabel: "Payment received from {{name}}",
     duePaymentToLabel: "Payment made to {{name}}",
   },
@@ -348,6 +354,14 @@ const en = {
     confirmResetMsg: "This replaces all current products, sales, expenses and dues with a realistic demo dataset. This cannot be undone.",
     resetBtn: "Reset",
     languageLabel: "Language",
+    invalidNegativeValue: "These values can't be negative.",
+    archivedProductsTitle: "Archived products",
+    archivedProductsSubtitle: "Products you've archived instead of deleted, because they have sales or stock history.",
+    noArchivedProducts: "No archived products.",
+    restoreBtn: "Restore",
+    deleteForeverBtn: "Delete forever",
+    deleteForeverTitle: "Delete this product forever?",
+    deleteForeverMsg: '"{{name}}" and its stock history will be permanently removed. This cannot be undone.',
   },
 
   onboarding: {

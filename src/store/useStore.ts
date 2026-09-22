@@ -77,7 +77,9 @@ interface StoreState {
   addProduct: (input: Omit<Product, "id" | "createdAt" | "archived">) => void;
   updateProduct: (productId: string, partial: Partial<Product>) => void;
   archiveProduct: (productId: string) => void;
+  restoreProduct: (productId: string) => void;
   deleteProduct: (productId: string) => { ok: boolean; archived?: boolean };
+  permanentlyDeleteProduct: (productId: string) => void;
 
   stockIn: (productId: string, quantity: number, note?: string) => void;
   stockAdjust: (productId: string, type: Extract<StockMovementType, "damaged" | "expired" | "adjustment">, delta: number, note?: string) => void;
@@ -340,6 +342,32 @@ export const useStore = create<StoreState>()(
       if (get().isDemo) return;
       fireSync(
         [supabase.from("products").update({ archived: true }).eq("id", productId).eq("user_id", userId())],
+        prev
+      );
+    },
+
+    restoreProduct: (productId) => {
+      const prev = { products: get().products };
+      set((s) => ({ products: s.products.map((p) => (p.id === productId ? { ...p, archived: false } : p)) }));
+      if (get().isDemo) return;
+      fireSync(
+        [supabase.from("products").update({ archived: false }).eq("id", productId).eq("user_id", userId())],
+        prev
+      );
+    },
+
+    permanentlyDeleteProduct: (productId) => {
+      const prev = { products: get().products, movements: get().movements };
+      set((s) => ({
+        products: s.products.filter((p) => p.id !== productId),
+        movements: s.movements.filter((m) => m.productId !== productId),
+      }));
+      if (get().isDemo) return;
+      fireSync(
+        [
+          supabase.from("products").delete().eq("id", productId).eq("user_id", userId()),
+          supabase.from("stock_movements").delete().eq("product_id", productId).eq("user_id", userId()),
+        ],
         prev
       );
     },

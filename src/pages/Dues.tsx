@@ -6,7 +6,7 @@ import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { Modal, ConfirmDialog } from "../components/ui/Modal";
-import { Input, Label, Textarea } from "../components/ui/Field";
+import { Input, Label, NumberInput, Textarea } from "../components/ui/Field";
 import { formatMoney } from "../lib/currency";
 import { dueAmountPaid, dueAmountRemaining, isDueOverdue } from "../lib/calculations";
 import type { Due, DueType } from "../types";
@@ -202,7 +202,7 @@ export function Dues() {
           )}
           <div>
             <Label>{t("dues.amountLabel")}</Label>
-            <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
+            <NumberInput value={amount} onChange={setAmount} />
           </div>
           <div>
             <Label>{t("dues.dueDateOptionalLabel")}</Label>
@@ -234,7 +234,7 @@ export function Dues() {
         <div className="space-y-4">
           <div>
             <Label>{t("dues.amountLabel")}</Label>
-            <Input type="number" value={payAmount} onChange={(e) => setPayAmount(Number(e.target.value))} />
+            <NumberInput value={payAmount} onChange={setPayAmount} />
           </div>
           <p className="text-xs text-gray-400">
             {t("dues.willBeRecordedNote", { kind: tab === "customer" ? t("money.moneyIn") : t("money.moneyOut") })}
@@ -306,7 +306,7 @@ function EditDueForm({ due, onSave, onCancel }: { due: Due; onSave: (patch: Part
       </div>
       <div>
         <Label>{t("dues.originalAmountLabel")}</Label>
-        <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
+        <NumberInput value={amount} onChange={setAmount} />
       </div>
       <div>
         <Label>{t("dues.dueDateLabel2")}</Label>

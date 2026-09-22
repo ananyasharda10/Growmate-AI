@@ -27,9 +27,8 @@ export function buildDemoData(): {
   const movements: StockMovement[] = products.map((p) => ({
     id: id(),
     productId: p.id,
-    type: "stock_in",
+    type: "created",
     quantity: p.stock,
-    note: "Initial stock",
     date: p.createdAt,
   }));
 
@@ -89,7 +88,7 @@ export function buildDemoData(): {
 
   // Damaged / expired movements
   movements.push({ id: id(), productId: "p-eggs", type: "damaged", quantity: -2, note: "Cracked in transit", date: iso(10) });
-  movements.push({ id: id(), productId: "p-milk", type: "expired", quantity: -1, note: "Past expiry", date: iso(5) });
+  movements.push({ id: id(), productId: "p-milk", type: "expired", quantity: -1, date: iso(5) });
 
   const expenses: Expense[] = [
     { id: id(), amount: 3200, category: "inventory_purchase", paymentMethod: "cash", date: iso(35) },
