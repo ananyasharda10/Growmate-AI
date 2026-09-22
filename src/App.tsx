@@ -12,6 +12,11 @@ import { Analytics } from "./pages/Analytics";
 import { AIAdvisor } from "./pages/AIAdvisor";
 import { Settings } from "./pages/Settings";
 import { NotFound } from "./pages/NotFound";
+import { ForgotPassword } from "./pages/ForgotPassword";
+import { About } from "./pages/marketing/About";
+import { Pricing } from "./pages/marketing/Pricing";
+import { Terms } from "./pages/marketing/Terms";
+import { Privacy } from "./pages/marketing/Privacy";
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const session = useStore((s) => s.session);
@@ -62,6 +67,11 @@ export default function App() {
   return (
     <Routes>
       <Route path="/auth" element={session ? <Navigate to="/" replace /> : <Auth />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/pricing" element={<Pricing />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
       <Route
         path="/"
         element={

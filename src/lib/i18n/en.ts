@@ -39,6 +39,19 @@ const en = {
     signInFailed: "Sign in failed.",
     accountCreateFailed: "Something went wrong creating your account.",
     confirmEmail: "Account created. Check your email to confirm it, then sign in.",
+    confirmPasswordLabel: "Confirm password",
+    passwordsDontMatch: "Passwords don't match.",
+    mustAgreeToTerms: "Please agree to the Terms of Service and Privacy Policy to continue.",
+    agreeToTermsPre: "I agree to the",
+    agreeToTermsAnd: "and",
+    agreeToTermsSuffix: "",
+    forgotPasswordLink: "Forgot password?",
+    forgotPasswordTitle: "Reset your password",
+    forgotPasswordSubtitle: "We'll email you a link to set a new password.",
+    forgotPasswordSent: "If an account exists for {{email}}, a password reset link is on its way — check your inbox.",
+    sendResetLinkBtn: "Send reset link",
+    backToSignIn: "← Back to sign in",
+    demoNoPasswordReset: "Demo accounts don't have a password to reset.",
   },
 
   layout: {
@@ -466,6 +479,139 @@ const en = {
     title: "Page not found",
     subtitle: "The page you're looking for doesn't exist or may have moved.",
     backBtn: "Back to Dashboard",
+  },
+
+  marketing: {
+    navAbout: "About",
+    navPricing: "Pricing",
+    navSignIn: "Sign in",
+    navTerms: "Terms",
+    navPrivacy: "Privacy",
+    footerCopyright: "© {{year}} {{appName}}. All rights reserved.",
+    lastUpdated: "Last updated: {{date}}",
+
+    aboutTitle: "About {{appName}}",
+    aboutIntro:
+      "GrowMate AI is a small-business management app for tracking inventory, sales, expenses and money owed — in one place, in the language you're comfortable with.",
+    aboutWhoFor:
+      "It's built for people running a food stall, a home business, a small retail shop, or reselling products — anyone who's been keeping track of stock and money in a notebook or a scattered set of apps and wants one simple place for it instead.",
+    featuresTitle: "What you can do with it",
+    feature: {
+      inventory: {
+        title: "Inventory",
+        body: "Track stock, cost and sell price per product, get low-stock and expiry warnings, and log every stock-in, damage and adjustment.",
+      },
+      money: {
+        title: "Money In / Out",
+        body: "Record every sale and expense with the payment method used — cash, UPI, card or credit — so your cash balance always stays accurate.",
+      },
+      dues: {
+        title: "Dues",
+        body: "Keep track of what customers owe you and what you owe suppliers, with partial payments, settling, and undo.",
+      },
+      analytics: {
+        title: "Analytics",
+        body: "See sales trends, top-selling and top-earning products, margins, and where your money is going, month over month.",
+      },
+      advisor: {
+        title: "AI Advisor",
+        body: "Ask plain questions about your own business — in English or Hindi — and get answers grounded in your real, current data.",
+      },
+      bilingual: {
+        title: "Bilingual by design",
+        body: "Every screen works fully in English or Hindi, switchable at any time from a single toggle.",
+      },
+    },
+
+    pricingTitle: "Pricing",
+    pricingIntro: "Simple, and free for now — try the whole app, no payment details needed.",
+    pricingPlanName: "Everything, free",
+    pricingPlanPrice: "₹0",
+    pricingIncluded: {
+      products: "Unlimited products, sales, expenses and dues",
+      money: "Full Money In / Out tracking across cash, UPI, card and credit",
+      dues: "Customer and supplier dues, with partial payments and undo",
+      analytics: "Analytics and monthly trends",
+      advisor: "AI Advisor, grounded in your own business data",
+      languages: "Full English and Hindi support",
+    },
+    pricingCta: "Get started",
+
+    termsTitle: "Terms of Service",
+    terms: {
+      acceptance: {
+        heading: "1. Acceptance of these terms",
+        body: "By creating an account or using GrowMate AI (\"the app\"), you agree to these terms. If you don't agree, please don't use the app.",
+      },
+      serviceDescription: {
+        heading: "2. What the app does",
+        body: "GrowMate AI helps you record and track your own business's inventory, sales, expenses, and money owed, and offers an AI assistant that answers questions about that data. It's provided as a tool to help you keep records — it doesn't replace professional accounting, tax, or legal advice.",
+      },
+      accounts: {
+        heading: "3. Your account",
+        body: "You're responsible for the accuracy of the information you enter, for keeping your password confidential, and for all activity that happens under your account. You can also try the app in Demo mode, which doesn't require an account and doesn't save your data anywhere.",
+      },
+      acceptableUse: {
+        heading: "4. Acceptable use",
+        body: "Please don't use the app to store data you don't have the right to store, to attempt to disrupt or gain unauthorized access to it, or to abuse the AI Advisor (for example, by sending it something other than genuine business questions).",
+      },
+      yourData: {
+        heading: "5. Your data",
+        body: "The products, sales, expenses and dues you enter belong to you. You can export it at any time as CSV from Settings. See our Privacy Policy for how it's stored and used.",
+      },
+      thirdPartyServices: {
+        heading: "6. Third-party services",
+        body: "The app relies on third-party infrastructure to work: Supabase for account authentication and data storage, and Groq for the AI Advisor's answers. Your use of the app is also subject to those providers processing data as described in our Privacy Policy.",
+      },
+      disclaimer: {
+        heading: "7. No warranty",
+        body: "The app is provided \"as is,\" without warranties of any kind. We don't guarantee it will be error-free, uninterrupted, or perfectly accurate — including the AI Advisor's answers, which are generated by a language model and should be checked against your own records for anything important.",
+      },
+      liability: {
+        heading: "8. Limitation of liability",
+        body: "To the fullest extent permitted by law, GrowMate AI and its creator aren't liable for any indirect, incidental, or consequential loss arising from your use of the app, including loss of data or business decisions made based on it.",
+      },
+      changes: {
+        heading: "9. Changes to these terms",
+        body: "We may update these terms as the app changes. Continuing to use the app after an update means you accept the revised terms.",
+      },
+      contact: {
+        heading: "10. Contact",
+        body: "Questions about these terms can be sent through the contact details provided in the app.",
+      },
+    },
+
+    privacyTitle: "Privacy Policy",
+    privacy: {
+      infoWeCollect: {
+        heading: "1. Information we collect",
+        body: "Your account email (and name, if you provide one), and the business data you choose to enter: products, sales, expenses, dues, and your business settings (name, type, currency, opening cash balance).",
+      },
+      howWeUseIt: {
+        heading: "2. How we use it",
+        body: "To show your data back to you and power the app's features — inventory tracking, cash calculations, analytics, and reminders. When you use the AI Advisor, the relevant parts of your business data (and your question) are sent to our AI provider, Groq, to generate an answer — this happens only when you actively ask a question.",
+      },
+      dataStorage: {
+        heading: "3. Where your data is stored",
+        body: "Your account and business data are stored with Supabase, our database and authentication provider. Demo mode is the exception — it never touches this storage; your demo data lives only in your browser and disappears when you reload or sign out.",
+      },
+      dataSharing: {
+        heading: "4. Data sharing",
+        body: "We don't sell your data. It's shared only with the infrastructure providers needed to run the app (Supabase for storage/auth, Groq for AI Advisor answers), and only to the extent needed for those features to work.",
+      },
+      yourChoices: {
+        heading: "5. Your choices",
+        body: "You can export all of your data as CSV at any time from Settings. To delete your account and data, contact us through the details provided in the app.",
+      },
+      changes: {
+        heading: "6. Changes to this policy",
+        body: "We may update this policy as the app changes. We'll change the \"last updated\" date above when we do.",
+      },
+      contact: {
+        heading: "7. Contact",
+        body: "Questions about this policy can be sent through the contact details provided in the app.",
+      },
+    },
   },
 };
 

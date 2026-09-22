@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useStore } from "../store/useStore";
 import { useT } from "../lib/i18n/useT";
 import { Button } from "../components/ui/Button";
@@ -17,12 +17,24 @@ export function Auth() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (mode === "signup") {
+      if (password !== confirmPassword) {
+        setError(t("auth.passwordsDontMatch"));
+        return;
+      }
+      if (!agreedToTerms) {
+        setError(t("auth.mustAgreeToTerms"));
+        return;
+      }
+    }
     setSubmitting(true);
     const result = mode === "signin" ? await signIn(email, password) : await signUp(email, password);
     setSubmitting(false);
@@ -92,6 +104,46 @@ export function Auth() {
               <Label>{t("auth.passwordLabel")}</Label>
               <Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
             </div>
+            {mode === "signup" && (
+              <div>
+                <Label>{t("auth.confirmPasswordLabel")}</Label>
+                <Input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </div>
+            )}
+            {mode === "signin" && (
+              <div className="text-right">
+                <Link to="/forgot-password" className="text-xs font-medium text-brand-700 hover:underline">
+                  {t("auth.forgotPasswordLink")}
+                </Link>
+              </div>
+            )}
+            {mode === "signup" && (
+              <label className="flex items-start gap-2 text-xs text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                />
+                <span>
+                  {t("auth.agreeToTermsPre")}{" "}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-medium text-brand-700 hover:underline">
+                    {t("marketing.navTerms")}
+                  </a>{" "}
+                  {t("auth.agreeToTermsAnd")}{" "}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-brand-700 hover:underline">
+                    {t("marketing.navPrivacy")}
+                  </a>
+                  {t("auth.agreeToTermsSuffix")}
+                </span>
+              </label>
+            )}
             {error && <p className="text-sm text-red-600">{error}</p>}
             <Button type="submit" fullWidth disabled={submitting}>
               {submitting ? t("common.pleaseWait") : mode === "signin" ? t("auth.signIn") : t("auth.signUp")}
@@ -105,6 +157,21 @@ export function Auth() {
         >
           {t("auth.tryDemo")}
         </button>
+
+        <div className="mt-8 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-gray-400">
+          <Link to="/about" className="hover:text-gray-600">
+            {t("marketing.navAbout")}
+          </Link>
+          <Link to="/pricing" className="hover:text-gray-600">
+            {t("marketing.navPricing")}
+          </Link>
+          <Link to="/terms" className="hover:text-gray-600">
+            {t("marketing.navTerms")}
+          </Link>
+          <Link to="/privacy" className="hover:text-gray-600">
+            {t("marketing.navPrivacy")}
+          </Link>
+        </div>
       </div>
     </div>
   );

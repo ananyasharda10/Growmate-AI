@@ -67,6 +67,7 @@ interface StoreState {
 
   signIn: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   signUp: (email: string, password: string, name?: string) => Promise<{ ok: boolean; error?: string }>;
+  resetPassword: (email: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
   hydrate: (userId: string) => Promise<void>;
   setSessionFromSupabase: (userId: string, email: string, name?: string) => void;
@@ -220,6 +221,15 @@ export const useStore = create<StoreState>()(
       }
       get().setSessionFromSupabase(data.user.id, data.user.email ?? email, name);
       await get().hydrate(data.user.id);
+      return { ok: true };
+    },
+
+    resetPassword: async (email) => {
+      if (get().isDemo) return { ok: false, error: t(get().language, "auth.demoNoPasswordReset") };
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+      if (error) return { ok: false, error: error.message };
       return { ok: true };
     },
 
