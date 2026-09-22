@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Send, Sparkles } from "lucide-react";
 import { useStore } from "../store/useStore";
 import { useT } from "../lib/i18n/useT";
@@ -37,9 +37,15 @@ export function AIAdvisor() {
   const resolveAdvisorTurn = useStore((s) => s.resolveAdvisorTurn);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  // `busy` state alone isn't enough: several rapid clicks/Enter presses can all fire before
+  // React re-renders with the disabled button, each still reading the stale `busy = false`
+  // from its own closure. A ref is set synchronously, so the very next call sees the lock
+  // immediately regardless of render timing.
+  const busyRef = useRef(false);
 
   async function ask(question: string) {
-    if (!question.trim() || busy) return;
+    if (!question.trim() || busyRef.current) return;
+    busyRef.current = true;
     setInput("");
     setBusy(true);
     // Once a turn's answer is set below, it is never touched again — earlier turns in the
@@ -64,6 +70,7 @@ export function AIAdvisor() {
       resolveAdvisorTurn({ answer: t("advisor.errorReply"), error: true });
     } finally {
       clearTimeout(timeout);
+      busyRef.current = false;
       setBusy(false);
     }
   }

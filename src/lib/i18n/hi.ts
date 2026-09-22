@@ -172,6 +172,9 @@ const hi: Translations = {
     createSeparateBtn: "फिर भी जोड़ें",
     nameRequired: "उत्पाद का नाम ज़रूरी है।",
     adjustExceedsStock: "यह मौजूदा स्टॉक {{stock}} {{unit}} से ज़्यादा है — मात्रा कम करें।",
+    nameTooLong: "उत्पाद का नाम {{max}} अक्षरों से ज़्यादा नहीं हो सकता।",
+    priceTooHigh: "कीमत असामान्य रूप से ज़्यादा है। कृपया राशि दोबारा जांचें।",
+    negativeMarginWarning: "कॉस्ट, सेल प्राइस से ज़्यादा है — यह {{percent}}% मार्जिन है (हर बिक्री पर नुकसान)।",
   },
 
   money: {

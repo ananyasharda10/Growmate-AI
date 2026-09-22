@@ -202,7 +202,7 @@ export function topSellersByUnits(sales: Sale[], products: Product[], limit = 5)
   const productMap = new Map(products.map((p) => [p.id, p]));
   return [...qtyByProduct.entries()]
     .map(([productId, qty]) => ({ product: productMap.get(productId), qty }))
-    .filter((x) => x.product)
+    .filter((x) => x.product && !x.product.archived)
     .sort((a, b) => b.qty - a.qty)
     .slice(0, limit) as { product: Product; qty: number }[];
 }
@@ -216,7 +216,7 @@ export function topEarnersByRevenue(sales: Sale[], products: Product[], limit = 
   const productMap = new Map(products.map((p) => [p.id, p]));
   return [...revByProduct.entries()]
     .map(([productId, revenue]) => ({ product: productMap.get(productId), revenue }))
-    .filter((x) => x.product)
+    .filter((x) => x.product && !x.product.archived)
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, limit) as { product: Product; revenue: number }[];
 }

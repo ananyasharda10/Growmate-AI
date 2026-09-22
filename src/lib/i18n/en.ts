@@ -170,6 +170,9 @@ const en = {
     createSeparateBtn: "Add anyway",
     nameRequired: "Product name is required.",
     adjustExceedsStock: "This exceeds the current stock of {{stock}} {{unit}} — reduce the quantity.",
+    nameTooLong: "Product name can't be longer than {{max}} characters.",
+    priceTooHigh: "Price is unreasonably high. Please double-check the amount.",
+    negativeMarginWarning: "Cost is higher than sell price — this is a {{percent}}% margin (a loss on every sale).",
   },
 
   money: {

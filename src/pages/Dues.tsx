@@ -193,7 +193,7 @@ export function Dues() {
         <div className="space-y-4">
           <div>
             <Label>{tab === "customer" ? t("dues.customerNameLabel") : t("dues.supplierNameLabel")}</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
+            <Input maxLength={100} value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           {matchingDue && (
             <p className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -302,7 +302,7 @@ function EditDueForm({ due, onSave, onCancel }: { due: Due; onSave: (patch: Part
     <div className="space-y-4">
       <div>
         <Label>{t("dues.nameLabel")}</Label>
-        <Input value={name} onChange={(e) => setName(e.target.value)} />
+        <Input maxLength={100} value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div>
         <Label>{t("dues.originalAmountLabel")}</Label>

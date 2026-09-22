@@ -157,7 +157,7 @@ export function Dashboard() {
     }
     return [...qty.entries()]
       .map(([productId, q]) => ({ product: products.find((p) => p.id === productId), q }))
-      .filter((x) => x.product)
+      .filter((x) => x.product && !x.product.archived)
       .sort((a, b) => b.q - a.q)
       .slice(0, 5) as { product: typeof products[number]; q: number }[];
   }, [sales, products, weekData]);

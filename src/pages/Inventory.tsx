@@ -38,6 +38,8 @@ const emptyForm = {
 };
 
 const LARGE_QTY_THRESHOLD = 10000;
+const MAX_NAME_LENGTH = 100;
+const MAX_PRICE = 10_000_000;
 
 export function Inventory() {
   const { t } = useT();
@@ -87,6 +89,8 @@ export function Inventory() {
     return products.find((p) => !p.archived && p.id !== editing?.id && p.name.trim().toLowerCase() === key);
   }, [form.name, products, editing]);
 
+  const negativeMargin = Number(form.cost) > 0 && Number(form.sell) > 0 && Number(form.cost) > Number(form.sell);
+
   function openAdd() {
     setEditing(null);
     setForm({ ...emptyForm, reorderLevel: defaultLowStock });
@@ -125,12 +129,20 @@ export function Inventory() {
       setFormError(t("inventory.nameRequired"));
       return;
     }
+    if (payload.name.length > MAX_NAME_LENGTH) {
+      setFormError(t("inventory.nameTooLong", { max: MAX_NAME_LENGTH }));
+      return;
+    }
     if (payload.sell <= 0) {
       setFormError(t("inventory.invalidSellPrice"));
       return;
     }
     if (payload.cost < 0 || payload.stock < 0 || payload.reorderLevel < 0) {
       setFormError(t("inventory.invalidNegativeValue"));
+      return;
+    }
+    if (payload.cost > MAX_PRICE || payload.sell > MAX_PRICE) {
+      setFormError(t("inventory.priceTooHigh"));
       return;
     }
     setFormError("");
@@ -310,7 +322,7 @@ export function Inventory() {
         <div className="space-y-4">
           <div>
             <Label>{t("inventory.productNameLabel")}</Label>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <Input maxLength={MAX_NAME_LENGTH} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
           {matchingProduct && (
             <p className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -353,6 +365,11 @@ export function Inventory() {
               <Input type="date" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} min={todayISO()} />
             </div>
           </div>
+          {negativeMargin && (
+            <p className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              {t("inventory.negativeMarginWarning", { percent: grossMarginPercent(Number(form.cost), Number(form.sell)).toFixed(0) })}
+            </p>
+          )}
           {formError && <p className="text-sm text-red-600">{formError}</p>}
           <Button fullWidth onClick={saveForm}>
             {matchingProduct ? t("inventory.createSeparateBtn") : editing ? t("inventory.saveChangesBtn") : t("inventory.addProductBtn")}
