@@ -168,6 +168,8 @@ const en = {
     daysLeftSuffix: "{{days}}d",
     duplicateNameNotice: 'A product named "{{name}}" already exists.',
     createSeparateBtn: "Add anyway",
+    nameRequired: "Product name is required.",
+    adjustExceedsStock: "This exceeds the current stock of {{stock}} {{unit}} — reduce the quantity.",
   },
 
   money: {
@@ -362,6 +364,7 @@ const en = {
     deleteForeverBtn: "Delete forever",
     deleteForeverTitle: "Delete this product forever?",
     deleteForeverMsg: '"{{name}}" and its stock history will be permanently removed. This cannot be undone.',
+    currencyLockedNote: "Currency can't be changed once you have data recorded, since amounts aren't converted — only the symbol would change.",
   },
 
   onboarding: {

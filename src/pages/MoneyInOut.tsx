@@ -9,7 +9,7 @@ import { Input, Label, NumberInput, Select, Textarea } from "../components/ui/Fi
 import { formatMoney } from "../lib/currency";
 import { cashOnHand, cashPaidForExpenses, cashReceivedFromSales, duePaymentsTotal } from "../lib/calculations";
 import { PAYMENT_METHODS, EXPENSE_CATEGORY_VALUES, type Currency, type Expense, type ExpenseCategory, type PaymentMethod, type Sale } from "../types";
-import { nowISO } from "../lib/id";
+import { localDateOf, nowISO } from "../lib/id";
 
 export function MoneyInOut() {
   const { t } = useT();
@@ -343,7 +343,7 @@ export function MoneyInOut() {
                       {tx.sale.isQuickCash ? t("money.cashSaleLabel") : tx.sale.productName}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {tx.sale.date.slice(0, 10)} · {tx.sale.quantity} × {formatMoney(tx.sale.unitPrice, currency)} · {t(`enums.paymentMethod.${tx.sale.paymentMethod}`)}
+                      {localDateOf(tx.sale.date)} · {tx.sale.quantity} × {formatMoney(tx.sale.unitPrice, currency)} · {t(`enums.paymentMethod.${tx.sale.paymentMethod}`)}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -366,7 +366,7 @@ export function MoneyInOut() {
                   <div>
                     <p className="text-sm font-semibold text-gray-800">{t(`enums.expenseCategory.${tx.expense.category}`)}</p>
                     <p className="text-xs text-gray-400">
-                      {tx.expense.date.slice(0, 10)} · {t(`enums.paymentMethod.${tx.expense.paymentMethod}`)} {tx.expense.note ? `· ${tx.expense.note}` : ""}
+                      {localDateOf(tx.expense.date)} · {t(`enums.paymentMethod.${tx.expense.paymentMethod}`)} {tx.expense.note ? `· ${tx.expense.note}` : ""}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">

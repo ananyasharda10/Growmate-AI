@@ -21,7 +21,7 @@ import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { OnboardingChecklist } from "../components/Onboarding";
 import { formatMoney } from "../lib/currency";
-import { todayISO, addDays } from "../lib/id";
+import { todayISO, addDays, localDateOf } from "../lib/id";
 import {
   buildRestockSuggestions,
   cashOnHand,
@@ -54,7 +54,7 @@ export function Dashboard() {
   const stockValue = products.filter((p) => !p.archived).reduce((sum, p) => sum + p.stock * p.cost, 0);
 
   const today = todayISO();
-  const todaysSales = sales.filter((s) => s.date.slice(0, 10) === today);
+  const todaysSales = sales.filter((s) => localDateOf(s.date) === today);
   const todaysSalesTotal = todaysSales.reduce((sum, s) => sum + s.total, 0);
 
   const cash = cashOnHand(settings.openingCashBalance, sales, expenses, dues);
@@ -142,7 +142,7 @@ export function Dashboard() {
     }
     const map = new Map(days.map((d, idx) => [d.key, idx]));
     for (const s of sales) {
-      const key = s.date.slice(0, 10);
+      const key = localDateOf(s.date);
       const idx = map.get(key);
       if (idx !== undefined) days[idx].total += s.total;
     }
@@ -152,7 +152,7 @@ export function Dashboard() {
   const topSellersThisWeek = useMemo(() => {
     const qty = new Map<string, number>();
     for (const s of sales) {
-      if (!s.productId || !weekData.some((d) => d.key === s.date.slice(0, 10))) continue;
+      if (!s.productId || !weekData.some((d) => d.key === localDateOf(s.date))) continue;
       qty.set(s.productId, (qty.get(s.productId) ?? 0) + s.quantity);
     }
     return [...qty.entries()]
@@ -165,9 +165,9 @@ export function Dashboard() {
   const isEmpty = products.length === 0 && sales.length === 0;
 
   const cashReceivedToday = cashReceivedFromSales(todaysSales);
-  const expensesToday = expenses.filter((e) => e.date.slice(0, 10) === today).reduce((s, e) => s + e.amount, 0);
+  const expensesToday = expenses.filter((e) => localDateOf(e.date) === today).reduce((s, e) => s + e.amount, 0);
   const creditAddedToday = dues
-    .filter((d) => d.type === "customer" && d.autoCreated && d.createdAt.slice(0, 10) === today)
+    .filter((d) => d.type === "customer" && d.autoCreated && localDateOf(d.createdAt) === today)
     .reduce((s, d) => s + d.originalAmount, 0);
   const overdueCustomerTotal = pendingCustomerDues.filter((d) => isDueOverdue(d)).reduce((s, d) => s + dueAmountRemaining(d), 0);
 

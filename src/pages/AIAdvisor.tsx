@@ -54,7 +54,7 @@ export function AIAdvisor() {
       const res = await fetch("/api/advisor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, language, context: buildAdvisorContext(ctx) }),
+        body: JSON.stringify({ question, language, context: buildAdvisorContext(ctx), today: todayISO() }),
         signal: controller.signal,
       });
       const data = await res.json().catch(() => ({}));

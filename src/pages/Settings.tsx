@@ -50,6 +50,11 @@ export function Settings() {
   const [deleteForeverTarget, setDeleteForeverTarget] = useState<Product | null>(null);
 
   const archivedProducts = products.filter((p) => p.archived);
+  // Switching currency only ever changed the displayed symbol — every amount already
+  // recorded stayed the same number, silently relabeled into a different currency. Since
+  // there's no exchange-rate conversion here, the only safe fix is to stop letting the
+  // currency change once there's real data it would mislabel.
+  const hasData = products.length > 0 || sales.length > 0 || expenses.length > 0 || dues.length > 0;
 
   function saveBusiness() {
     if (lowStock < 0 || opening < 0) {
@@ -144,10 +149,11 @@ export function Settings() {
           </div>
           <div>
             <Label>{t("settings.currencyLabel")}</Label>
-            <Select value={currency} onChange={(e) => setCurrency(e.target.value as Currency)}>
+            <Select value={currency} disabled={hasData} onChange={(e) => setCurrency(e.target.value as Currency)}>
               <option value="INR">INR (₹)</option>
               <option value="USD">USD ($)</option>
             </Select>
+            {hasData && <p className="mt-1 text-xs text-gray-400">{t("settings.currencyLockedNote")}</p>}
           </div>
           <div>
             <Label>{t("settings.defaultLowStockLabel")}</Label>

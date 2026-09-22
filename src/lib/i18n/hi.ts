@@ -170,6 +170,8 @@ const hi: Translations = {
     daysLeftSuffix: "{{days}} दिन",
     duplicateNameNotice: '"{{name}}" नाम का उत्पाद पहले से मौजूद है।',
     createSeparateBtn: "फिर भी जोड़ें",
+    nameRequired: "उत्पाद का नाम ज़रूरी है।",
+    adjustExceedsStock: "यह मौजूदा स्टॉक {{stock}} {{unit}} से ज़्यादा है — मात्रा कम करें।",
   },
 
   money: {
@@ -364,6 +366,7 @@ const hi: Translations = {
     deleteForeverBtn: "हमेशा के लिए डिलीट करें",
     deleteForeverTitle: "इस उत्पाद को हमेशा के लिए डिलीट करें?",
     deleteForeverMsg: '"{{name}}" और इसकी स्टॉक हिस्ट्री हमेशा के लिए हट जाएगी। इसे पूर्ववत नहीं किया जा सकता।',
+    currencyLockedNote: "डेटा दर्ज होने के बाद करेंसी नहीं बदली जा सकती, क्योंकि राशि कन्वर्ट नहीं होती — सिर्फ चिन्ह बदल जाता।",
   },
 
   onboarding: {

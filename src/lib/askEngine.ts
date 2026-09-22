@@ -1,5 +1,6 @@
 import type { Currency, Due, Expense, Product, Sale } from "../types";
 import { cashOnHand, dueAmountRemaining } from "./calculations";
+import { localDateOf } from "./id";
 
 export interface AskContext {
   products: Product[];
@@ -73,7 +74,7 @@ export function buildAdvisorContext(ctx: AskContext): string {
     unitPrice: s.unitPrice,
     total: s.total,
     paymentMethod: s.paymentMethod,
-    date: s.date.slice(0, 10),
+    date: localDateOf(s.date),
     customerName: s.customerName ?? null,
   }));
 
@@ -81,7 +82,7 @@ export function buildAdvisorContext(ctx: AskContext): string {
     category: e.category,
     amount: e.amount,
     paymentMethod: e.paymentMethod,
-    date: e.date.slice(0, 10),
+    date: localDateOf(e.date),
     supplierName: e.supplierName ?? null,
   }));
 

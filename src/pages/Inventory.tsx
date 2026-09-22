@@ -67,6 +67,7 @@ export function Inventory() {
   const [adjustType, setAdjustType] = useState<StockMovementType>("damaged");
   const [adjustQty, setAdjustQty] = useState(1);
   const [adjustNote, setAdjustNote] = useState("");
+  const [adjustError, setAdjustError] = useState("");
 
   const [pendingLargeQty, setPendingLargeQty] = useState<{ type: "stockIn" | "adjust"; qty: number } | null>(null);
 
@@ -120,7 +121,10 @@ export function Inventory() {
       expiryDate: form.expiryDate || undefined,
       supplier: form.supplier.trim() || undefined,
     };
-    if (!payload.name) return;
+    if (!payload.name) {
+      setFormError(t("inventory.nameRequired"));
+      return;
+    }
     if (payload.sell <= 0) {
       setFormError(t("inventory.invalidSellPrice"));
       return;
@@ -166,6 +170,12 @@ export function Inventory() {
 
   function submitAdjust() {
     if (!adjustTarget || adjustQty === 0) return;
+    const delta = adjustType === "adjustment" ? adjustQty : -Math.abs(adjustQty);
+    if (adjustTarget.stock + delta < 0) {
+      setAdjustError(t("inventory.adjustExceedsStock", { stock: adjustTarget.stock, unit: t(`enums.unit.${adjustTarget.unit}`) }));
+      return;
+    }
+    setAdjustError("");
     if (Math.abs(adjustQty) > LARGE_QTY_THRESHOLD) {
       setPendingLargeQty({ type: "adjust", qty: adjustQty });
       return;
@@ -266,7 +276,13 @@ export function Inventory() {
                       <IconAction title={t("inventory.stockInTooltip")} onClick={() => setStockInTarget(p)}>
                         <ArrowDownCircle size={16} />
                       </IconAction>
-                      <IconAction title={t("inventory.adjustTooltip")} onClick={() => setAdjustTarget(p)}>
+                      <IconAction
+                        title={t("inventory.adjustTooltip")}
+                        onClick={() => {
+                          setAdjustError("");
+                          setAdjustTarget(p);
+                        }}
+                      >
                         <ArrowUpCircle size={16} />
                       </IconAction>
                       <IconAction title={t("inventory.historyTooltip")} onClick={() => setHistoryTarget(p)}>
@@ -362,7 +378,14 @@ export function Inventory() {
       </Modal>
 
       {/* Adjust / damage / expire */}
-      <Modal open={!!adjustTarget} onClose={() => setAdjustTarget(null)} title={t("inventory.adjustTitle", { name: adjustTarget?.name ?? "" })}>
+      <Modal
+        open={!!adjustTarget}
+        onClose={() => {
+          setAdjustTarget(null);
+          setAdjustError("");
+        }}
+        title={t("inventory.adjustTitle", { name: adjustTarget?.name ?? "" })}
+      >
         <div className="space-y-4">
           <div>
             <Label>{t("inventory.typeLabel")}</Label>
@@ -384,6 +407,7 @@ export function Inventory() {
             <Label>{t("inventory.noteOptionalLabel")}</Label>
             <Textarea rows={2} value={adjustNote} onChange={(e) => setAdjustNote(e.target.value)} />
           </div>
+          {adjustError && <p className="text-sm text-red-600">{adjustError}</p>}
           <Button fullWidth onClick={submitAdjust}>
             {t("inventory.saveBtn")}
           </Button>

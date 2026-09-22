@@ -36,7 +36,7 @@ App feature glossary, for "how does X work" style questions:
   cannot be undone.
 `.trim();
 
-function buildSystemPrompt(language: string, contextJson: string): string {
+function buildSystemPrompt(language: string, today: string, contextJson: string): string {
   const languageInstruction =
     language === "hi"
       ? "Respond in natural, conversational Hindi (Devanagari script)."
@@ -46,7 +46,7 @@ function buildSystemPrompt(language: string, contextJson: string): string {
 management app (inventory, sales, expenses, dues/credit tracking). You are helping the
 business owner understand their own numbers and use the app.
 
-Today's date: ${new Date().toISOString().slice(0, 10)}
+Today's date: ${today}
 
 Here is the business's current data, as JSON (products, recent sales, recent expenses,
 a precomputed expense total per category, dues, the names of every real customer and
@@ -97,10 +97,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const { question, language, context } = (req.body ?? {}) as {
+  const { question, language, context, today } = (req.body ?? {}) as {
     question?: unknown;
     language?: unknown;
     context?: unknown;
+    today?: unknown;
   };
 
   if (typeof question !== "string" || !question.trim()) {
@@ -113,6 +114,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   const lang = language === "hi" ? "hi" : "en";
   const contextJson = typeof context === "string" ? context.slice(0, 20_000) : "{}";
+  // The client sends its own local date — the server's clock could be in a different
+  // timezone than the user's device, which is exactly the "today" bug this app has had to
+  // fix elsewhere. Falls back to the server's UTC date only if the client didn't send one.
+  const todayDate =
+    typeof today === "string" && /^\d{4}-\d{2}-\d{2}$/.test(today) ? today : new Date().toISOString().slice(0, 10);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -129,7 +135,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         max_tokens: MAX_TOKENS,
         temperature: 0.3,
         messages: [
-          { role: "system", content: buildSystemPrompt(lang, contextJson) },
+          { role: "system", content: buildSystemPrompt(lang, todayDate, contextJson) },
           { role: "user", content: question },
         ],
       }),
