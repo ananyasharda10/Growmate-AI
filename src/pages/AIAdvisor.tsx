@@ -12,6 +12,11 @@ import { addDays, todayISO } from "../lib/id";
 
 type Turn = { question: string; answer: string | null; error?: boolean };
 
+// Slightly longer than the server's own 20s timeout, so a normal timeout response from the
+// server arrives first — this is just a backstop in case the network or function hangs
+// with no response at all, so the loading indicator can never spin forever.
+const CLIENT_TIMEOUT_MS = 25_000;
+
 export function AIAdvisor() {
   const { t, language } = useT();
   const products = useStore((s) => s.products);
@@ -39,11 +44,15 @@ export function AIAdvisor() {
     setBusy(true);
     setConversation((c) => [...c, { question, answer: null }]);
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
+
     try {
       const res = await fetch("/api/advisor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question, language, context: buildAdvisorContext(ctx) }),
+        signal: controller.signal,
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.answer) throw new Error(data?.error || "Request failed");
@@ -59,6 +68,7 @@ export function AIAdvisor() {
         return next;
       });
     } finally {
+      clearTimeout(timeout);
       setBusy(false);
     }
   }

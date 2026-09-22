@@ -93,12 +93,28 @@ export function buildAdvisorContext(ctx: AskContext): string {
     dueDate: d.dueDate ?? null,
   }));
 
+  // Precomputed here, not left to the model: asking an LLM to aggregate a raw list into
+  // categories is exactly the kind of task where it intermittently invents plausible-sounding
+  // rows instead of literally summing what's there. Handing it the finished totals removes
+  // that failure mode for category-spending questions entirely.
+  const categoryTotals = new Map<string, number>();
+  for (const e of ctx.expenses) categoryTotals.set(e.category, (categoryTotals.get(e.category) ?? 0) + e.amount);
+  const expenseTotalsByCategory = [...categoryTotals.entries()]
+    .map(([category, total]) => ({ category, total }))
+    .sort((a, b) => b.total - a.total);
+
+  const knownCustomerNames = ctx.dues.filter((d) => d.type === "customer").map((d) => d.name);
+  const knownSupplierNames = ctx.dues.filter((d) => d.type === "supplier").map((d) => d.name);
+
   return JSON.stringify({
     currency: ctx.currency,
     openingCashBalance: ctx.openingCashBalance,
     products,
     recentSales,
     recentExpenses,
+    expenseTotalsByCategory,
     dues,
+    knownCustomerNames,
+    knownSupplierNames,
   });
 }
