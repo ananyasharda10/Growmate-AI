@@ -429,6 +429,7 @@ const en = {
       Slow: "Slow",
     },
     movementType: {
+      created: "Product added",
       stock_in: "Stock in",
       sale: "Sale",
       damaged: "Damaged",

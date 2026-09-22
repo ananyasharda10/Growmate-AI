@@ -431,6 +431,7 @@ const hi: Translations = {
       Slow: "धीमा",
     },
     movementType: {
+      created: "उत्पाद जोड़ा गया",
       stock_in: "स्टॉक इन",
       sale: "बिक्री",
       damaged: "डैमेज",

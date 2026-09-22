@@ -41,7 +41,7 @@ export interface Product {
   createdAt: string;
 }
 
-export type StockMovementType = "stock_in" | "sale" | "damaged" | "expired" | "adjustment";
+export type StockMovementType = "created" | "stock_in" | "sale" | "damaged" | "expired" | "adjustment";
 
 export interface StockMovement {
   id: string;
@@ -123,4 +123,10 @@ export interface Session {
   id: string;
   email: string;
   name?: string;
+}
+
+export interface AdvisorTurn {
+  question: string;
+  answer: string | null;
+  error?: boolean;
 }

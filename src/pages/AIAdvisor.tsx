@@ -10,8 +10,6 @@ import { buildAdvisorContext, SAMPLE_QUESTION_IDS, type AskContext } from "../li
 import { buildRestockSuggestions, cashOnHand, dueAmountRemaining, isDueOverdue, moveSpeed } from "../lib/calculations";
 import { addDays, todayISO } from "../lib/id";
 
-type Turn = { question: string; answer: string | null; error?: boolean };
-
 // Slightly longer than the server's own 20s timeout, so a normal timeout response from the
 // server arrives first — this is just a backstop in case the network or function hangs
 // with no response at all, so the loading indicator can never spin forever.
@@ -34,7 +32,9 @@ export function AIAdvisor() {
     currency: settings.currency,
   };
 
-  const [conversation, setConversation] = useState<Turn[]>([]);
+  const conversation = useStore((s) => s.advisorConversation);
+  const addAdvisorTurn = useStore((s) => s.addAdvisorTurn);
+  const resolveAdvisorTurn = useStore((s) => s.resolveAdvisorTurn);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -42,7 +42,10 @@ export function AIAdvisor() {
     if (!question.trim() || busy) return;
     setInput("");
     setBusy(true);
-    setConversation((c) => [...c, { question, answer: null }]);
+    // Once a turn's answer is set below, it is never touched again — earlier turns in the
+    // conversation stay exactly as first shown, and the conversation itself is persisted so
+    // navigating away and back renders the same saved answers instead of losing them.
+    addAdvisorTurn(question);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
@@ -56,17 +59,9 @@ export function AIAdvisor() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.answer) throw new Error(data?.error || "Request failed");
-      setConversation((c) => {
-        const next = [...c];
-        next[next.length - 1] = { question, answer: data.answer };
-        return next;
-      });
+      resolveAdvisorTurn({ answer: data.answer });
     } catch {
-      setConversation((c) => {
-        const next = [...c];
-        next[next.length - 1] = { question, answer: t("advisor.errorReply"), error: true };
-        return next;
-      });
+      resolveAdvisorTurn({ answer: t("advisor.errorReply"), error: true });
     } finally {
       clearTimeout(timeout);
       setBusy(false);

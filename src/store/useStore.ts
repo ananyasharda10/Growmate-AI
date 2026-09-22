@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { t, type Language } from "../lib/i18n";
 import type {
+  AdvisorTurn,
   BusinessSettings,
   Due,
   DueType,
@@ -58,6 +59,11 @@ interface StoreState {
   syncError: string | null;
   language: Language;
   setLanguage: (language: Language) => void;
+
+  advisorConversation: AdvisorTurn[];
+  addAdvisorTurn: (question: string) => void;
+  resolveAdvisorTurn: (patch: Partial<AdvisorTurn>) => void;
+  clearAdvisorConversation: () => void;
 
   signIn: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   signUp: (email: string, password: string, name?: string) => Promise<{ ok: boolean; error?: string }>;
@@ -184,6 +190,17 @@ export const useStore = create<StoreState>()(
     language: "en" as Language,
     setLanguage: (language) => set({ language }),
 
+    advisorConversation: [],
+    addAdvisorTurn: (question) => set((s) => ({ advisorConversation: [...s.advisorConversation, { question, answer: null }] })),
+    resolveAdvisorTurn: (patch) =>
+      set((s) => {
+        if (s.advisorConversation.length === 0) return {};
+        const next = [...s.advisorConversation];
+        next[next.length - 1] = { ...next[next.length - 1], ...patch };
+        return { advisorConversation: next };
+      }),
+    clearAdvisorConversation: () => set({ advisorConversation: [] }),
+
     signIn: async (email, password) => {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error || !data.user) return { ok: false, error: error?.message ?? t(get().language, "auth.signInFailed") };
@@ -292,10 +309,17 @@ export const useStore = create<StoreState>()(
 
     addProduct: (input) => {
       const product: Product = { ...input, id: id(), archived: false, createdAt: nowISO() };
-      const prev = { products: get().products };
-      set((s) => ({ products: [...s.products, product] }));
+      const movement: StockMovement = { id: id(), productId: product.id, type: "created", quantity: product.stock, date: product.createdAt };
+      const prev = { products: get().products, movements: get().movements };
+      set((s) => ({ products: [...s.products, product], movements: [...s.movements, movement] }));
       if (get().isDemo) return;
-      fireSync([supabase.from("products").insert(productToRow(userId(), product))], prev);
+      fireSync(
+        [
+          supabase.from("products").insert(productToRow(userId(), product)),
+          supabase.from("stock_movements").insert(movementToRow(userId(), movement)),
+        ],
+        prev
+      );
     },
 
     updateProduct: (productId, partial) => {
@@ -676,6 +700,7 @@ export const useStore = create<StoreState>()(
         isDemo: true,
         hydrated: true,
         syncError: null,
+        advisorConversation: [],
       });
     },
 
@@ -694,12 +719,13 @@ export const useStore = create<StoreState>()(
         hydrated: false,
         syncError: null,
         settings: { ...defaultSettings },
+        advisorConversation: [],
       }),
   };
     },
     {
       name: "growmate-language",
-      partialize: (s) => ({ language: s.language }),
+      partialize: (s) => ({ language: s.language, advisorConversation: s.advisorConversation }),
     }
   )
 );

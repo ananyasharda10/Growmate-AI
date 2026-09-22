@@ -1,4 +1,5 @@
 import type { Currency, Due, Expense, Product, Sale } from "../types";
+import { cashOnHand, dueAmountRemaining } from "./calculations";
 
 export interface AskContext {
   products: Product[];
@@ -106,6 +107,21 @@ export function buildAdvisorContext(ctx: AskContext): string {
   const knownCustomerNames = ctx.dues.filter((d) => d.type === "customer").map((d) => d.name);
   const knownSupplierNames = ctx.dues.filter((d) => d.type === "supplier").map((d) => d.name);
 
+  // Same reasoning as expenseTotalsByCategory above: cash-on-hand and pending-dues totals
+  // involve summing across the sales/expenses/dues history, which can run well beyond what's
+  // included in recentSales/recentExpenses above. Precomputing them with the app's own
+  // calculations (the same functions the Dashboard and Money In/Out pages use) guarantees the
+  // advisor's cash answers always match the rest of the app instead of the model re-deriving
+  // — and possibly mis-deriving — its own totals from a partial list.
+  const pendingCustomerDuesTotal = ctx.dues
+    .filter((d) => d.type === "customer" && d.status !== "settled")
+    .reduce((s, d) => s + dueAmountRemaining(d), 0);
+  const pendingSupplierDuesTotal = ctx.dues
+    .filter((d) => d.type === "supplier" && d.status !== "settled")
+    .reduce((s, d) => s + dueAmountRemaining(d), 0);
+  const currentCashOnHand = cashOnHand(ctx.openingCashBalance, ctx.sales, ctx.expenses, ctx.dues);
+  const projectedCashIfAllDuesSettled = currentCashOnHand + pendingCustomerDuesTotal - pendingSupplierDuesTotal;
+
   return JSON.stringify({
     currency: ctx.currency,
     openingCashBalance: ctx.openingCashBalance,
@@ -116,5 +132,9 @@ export function buildAdvisorContext(ctx: AskContext): string {
     dues,
     knownCustomerNames,
     knownSupplierNames,
+    currentCashOnHand,
+    pendingCustomerDuesTotal,
+    pendingSupplierDuesTotal,
+    projectedCashIfAllDuesSettled,
   });
 }

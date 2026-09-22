@@ -13,7 +13,11 @@ function stripMarkdown(text: string): string {
     .replace(/^[-*]\s+/gm, "• ");
 }
 const MAX_QUESTION_LENGTH = 500;
-const MAX_TOKENS = 400;
+// The model does its reasoning inside this same token budget before writing the final
+// answer, so a low limit risks the response getting cut off mid-thought for anything that
+// takes a few steps to work out (e.g. a cash projection across dues and past transactions),
+// leaving the visible answer empty. Generous headroom keeps that from happening.
+const MAX_TOKENS = 900;
 const REQUEST_TIMEOUT_MS = 20_000;
 
 const FEATURE_GLOSSARY = `
@@ -57,6 +61,12 @@ Rules:
 - If asked about spending by category (e.g. "where did my money go"), use ONLY the
   "expenseTotalsByCategory" field, exactly as given — do not compute your own totals from
   "recentExpenses", and never mention a category that isn't in that field.
+- If asked about current cash on hand, or a projection like "how much cash would I have if I
+  collected everything owed to me and/or paid everything I owe", use the given
+  "currentCashOnHand", "pendingCustomerDuesTotal", "pendingSupplierDuesTotal", and
+  "projectedCashIfAllDuesSettled" fields directly — do not re-derive these by summing
+  "recentSales", "recentExpenses", or "dues" yourself, since those lists may not cover the
+  full history behind those totals.
 - If asked about a specific named person (a customer or supplier), first check whether that
   name (or an obvious close match) appears in "knownCustomerNames" or "knownSupplierNames".
   If it does not, say plainly that you couldn't find that person in the records — do
