@@ -6,9 +6,11 @@ import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Field";
 import { formatMoney } from "../lib/currency";
-import { answerQuestion, SAMPLE_QUESTION_IDS, type AskContext } from "../lib/askEngine";
+import { buildAdvisorContext, SAMPLE_QUESTION_IDS, type AskContext } from "../lib/askEngine";
 import { buildRestockSuggestions, cashOnHand, dueAmountRemaining, isDueOverdue, moveSpeed } from "../lib/calculations";
 import { addDays, todayISO } from "../lib/id";
+
+type Turn = { question: string; answer: string | null; error?: boolean };
 
 export function AIAdvisor() {
   const { t, language } = useT();
@@ -27,14 +29,38 @@ export function AIAdvisor() {
     currency: settings.currency,
   };
 
-  const [conversation, setConversation] = useState<{ question: string; answer: string }[]>([]);
+  const [conversation, setConversation] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  function ask(question: string) {
-    if (!question.trim()) return;
-    const answer = answerQuestion(question, ctx, language);
-    setConversation((c) => [...c, { question, answer }]);
+  async function ask(question: string) {
+    if (!question.trim() || busy) return;
     setInput("");
+    setBusy(true);
+    setConversation((c) => [...c, { question, answer: null }]);
+
+    try {
+      const res = await fetch("/api/advisor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question, language, context: buildAdvisorContext(ctx) }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.answer) throw new Error(data?.error || "Request failed");
+      setConversation((c) => {
+        const next = [...c];
+        next[next.length - 1] = { question, answer: data.answer };
+        return next;
+      });
+    } catch {
+      setConversation((c) => {
+        const next = [...c];
+        next[next.length - 1] = { question, answer: t("advisor.errorReply"), error: true };
+        return next;
+      });
+    } finally {
+      setBusy(false);
+    }
   }
 
   const cash = cashOnHand(settings.openingCashBalance, sales, expenses, dues);
@@ -101,7 +127,8 @@ export function AIAdvisor() {
               <button
                 key={id}
                 onClick={() => ask(q)}
-                className="cursor-pointer rounded-full border border-brand-200 bg-brand-50 px-3.5 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-100"
+                disabled={busy}
+                className="cursor-pointer rounded-full border border-brand-200 bg-brand-50 px-3.5 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {q}
               </button>
@@ -116,9 +143,21 @@ export function AIAdvisor() {
           {conversation.map((turn, i) => (
             <div key={i} className="space-y-2">
               <p className="w-fit max-w-[85%] rounded-2xl rounded-br-sm bg-brand-600 px-4 py-2 text-sm text-white ml-auto">{turn.question}</p>
-              <p className="w-fit max-w-[85%] whitespace-pre-line rounded-2xl rounded-bl-sm bg-gray-100 px-4 py-2.5 text-sm text-gray-700">
-                {turn.answer}
-              </p>
+              {turn.answer === null ? (
+                <p className="flex w-fit items-center gap-1.5 rounded-2xl rounded-bl-sm bg-gray-100 px-4 py-2.5 text-sm text-gray-400">
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.3s]" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.15s]" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400" />
+                </p>
+              ) : (
+                <p
+                  className={`w-fit max-w-[85%] whitespace-pre-line rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm ${
+                    turn.error ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-700"
+                  }`}
+                >
+                  {turn.answer}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -130,8 +169,8 @@ export function AIAdvisor() {
           }}
           className="flex gap-2"
         >
-          <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder={t("advisor.inputPlaceholder")} />
-          <Button type="submit" icon={<Send size={16} />}>
+          <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder={t("advisor.inputPlaceholder")} disabled={busy} />
+          <Button type="submit" icon={<Send size={16} />} disabled={busy}>
             {t("advisor.askBtn")}
           </Button>
         </form>
