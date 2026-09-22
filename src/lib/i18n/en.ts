@@ -211,6 +211,7 @@ const en = {
     recordExpenseBtn: "Record expense",
     recentTransactionsTitle: "Recent transactions",
     noTransactions: "No transactions recorded yet.",
+    showAllTransactionsBtn: "Show all {{count}} transactions",
     editSaleTitle: "Edit sale",
     editExpenseTitle: "Edit expense",
     newTotalLabel: "New total: {{amount}}",

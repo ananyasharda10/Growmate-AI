@@ -137,7 +137,13 @@ export function Dashboard() {
     const days: { key: string; label: string; total: number }[] = [];
     for (let i = 6; i >= 0; i--) {
       const dateKey = addDays(today, -i);
-      const label = new Date(dateKey).toLocaleDateString(language === "hi" ? "hi-IN" : "en-US", { weekday: "short" });
+      // Parsed with an explicit local time-of-day, not just new Date(dateKey) — a bare
+      // "YYYY-MM-DD" string parses as UTC midnight, which toLocaleDateString then renders
+      // back in the local timezone, silently shifting the weekday label a day off for
+      // anyone west of UTC (exactly the bar-label-vs-tooltip mismatch this was causing).
+      const label = new Date(`${dateKey}T00:00:00`).toLocaleDateString(language === "hi" ? "hi-IN" : "en-US", {
+        weekday: "short",
+      });
       days.push({ key: dateKey, label, total: 0 });
     }
     const map = new Map(days.map((d, idx) => [d.key, idx]));

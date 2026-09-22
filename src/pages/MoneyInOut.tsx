@@ -125,14 +125,22 @@ export function MoneyInOut() {
     setExpQty(1);
   }
 
-  const recentTransactions = useMemo(() => {
+  // Every one of these rows feeds directly into Money In / Money Out / Cash on hand above —
+  // none of them are filtered out or truncated here, so the totals can always be traced back
+  // to a visible row. Only the on-screen list is paginated (via showAllTransactions), never
+  // the underlying data the totals are computed from.
+  const allTransactions = useMemo(() => {
     const s = sales.map((sale) => ({ kind: "sale" as const, date: sale.date, sale }));
     const e = expenses.map((expense) => ({ kind: "expense" as const, date: expense.date, expense }));
     const d = dues.flatMap((due) =>
       due.payments.map((payment) => ({ kind: "duePayment" as const, date: payment.date, due, payment }))
     );
-    return [...s, ...e, ...d].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 25);
+    return [...s, ...e, ...d].sort((a, b) => (a.date < b.date ? 1 : -1));
   }, [sales, expenses, dues]);
+
+  const [showAllTransactions, setShowAllTransactions] = useState(false);
+  const RECENT_TRANSACTIONS_PREVIEW = 25;
+  const recentTransactions = showAllTransactions ? allTransactions : allTransactions.slice(0, RECENT_TRANSACTIONS_PREVIEW);
 
   return (
     <div>
@@ -382,6 +390,14 @@ export function MoneyInOut() {
               )
             )}
           </ul>
+        )}
+        {!showAllTransactions && allTransactions.length > RECENT_TRANSACTIONS_PREVIEW && (
+          <button
+            onClick={() => setShowAllTransactions(true)}
+            className="mt-4 w-full cursor-pointer rounded-lg border border-gray-200 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+          >
+            {t("money.showAllTransactionsBtn", { count: allTransactions.length })}
+          </button>
         )}
       </Card>
 

@@ -213,6 +213,7 @@ const hi: Translations = {
     recordExpenseBtn: "खर्च दर्ज करें",
     recentTransactionsTitle: "हाल के लेन-देन",
     noTransactions: "अभी तक कोई लेन-देन दर्ज नहीं हुआ।",
+    showAllTransactionsBtn: "सभी {{count}} लेन-देन दिखाएं",
     editSaleTitle: "बिक्री एडिट करें",
     editExpenseTitle: "खर्च एडिट करें",
     newTotalLabel: "नया कुल: {{amount}}",
