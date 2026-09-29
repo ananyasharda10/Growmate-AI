@@ -36,11 +36,12 @@ function dedupeRepeatedAnswer(text: string): string {
 const MAX_QUESTION_LENGTH = 500;
 // The model does its reasoning inside this same token budget before writing the final
 // answer, so a low limit risks the response getting cut off mid-thought for anything that
-// takes a few steps to work out, leaving the visible answer empty. Now that the common
-// arithmetic (cash, dues, category shares, 7/30-day windows) is precomputed in the context
-// rather than left for the model to work out, it needs less reasoning room than before —
-// trimmed from 900 to help stay under Groq's free-tier per-minute token cap (see below).
-const MAX_TOKENS = 600;
+// takes a few steps to work out, leaving the visible answer empty — or, for a multi-item
+// list answer (e.g. "how much should I restock" over several products), cut off after the
+// first item or two with a dangling empty bullet. Raised back up slightly from 600 once that
+// truncation showed up in testing on a 3-product list; still well under the 900 this used to
+// be, to help stay under Groq's free-tier per-minute token cap (see below).
+const MAX_TOKENS = 750;
 const REQUEST_TIMEOUT_MS = 20_000;
 
 const FEATURE_GLOSSARY = `
@@ -135,6 +136,10 @@ Rules:
 - Keep answers brief and conversational — 1 to 3 short sentences, or a short list only if
   genuinely listing multiple items. Do not restate the raw JSON. Shorter answers are
   strongly preferred over longer ones.
+- If a question calls for listing several items (e.g. several products or several
+  customers), keep each item to one short clause. A complete list of brief items is always
+  better than a partial list of detailed ones — never let earlier items use up so much space
+  that later ones get cut off or dropped.
 - Plain text only — no markdown (no **bold**, no # headings, no bullet dashes). The chat
   display shows your response as-is, so markdown syntax would appear as literal characters.
   Use line breaks and "•" for lists if needed, nothing else.
