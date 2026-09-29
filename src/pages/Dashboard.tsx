@@ -25,6 +25,7 @@ import { formatDate } from "../lib/dateFormat";
 import { todayISO, addDays, localDateOf } from "../lib/id";
 import {
   buildRestockSuggestions,
+  buildWeekSalesData,
   cashOnHand,
   cashPaidForExpenses,
   dueAmountRemaining,
@@ -134,27 +135,10 @@ export function Dashboard() {
   }
 
   // This week's sales, Mon-Sun straight bar chart
-  const weekData = useMemo(() => {
-    const days: { key: string; label: string; total: number }[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const dateKey = addDays(today, -i);
-      // Parsed with an explicit local time-of-day, not just new Date(dateKey) — a bare
-      // "YYYY-MM-DD" string parses as UTC midnight, which toLocaleDateString then renders
-      // back in the local timezone, silently shifting the weekday label a day off for
-      // anyone west of UTC (exactly the bar-label-vs-tooltip mismatch this was causing).
-      const label = new Date(`${dateKey}T00:00:00`).toLocaleDateString(language === "hi" ? "hi-IN" : "en-US", {
-        weekday: "short",
-      });
-      days.push({ key: dateKey, label, total: 0 });
-    }
-    const map = new Map(days.map((d, idx) => [d.key, idx]));
-    for (const s of sales) {
-      const key = localDateOf(s.date);
-      const idx = map.get(key);
-      if (idx !== undefined) days[idx].total += s.total;
-    }
-    return days;
-  }, [sales, today, language]);
+  const weekData = useMemo(
+    () => buildWeekSalesData(sales, today, language === "hi" ? "hi-IN" : "en-US"),
+    [sales, today, language]
+  );
 
   const topSellersThisWeek = useMemo(() => {
     const qty = new Map<string, number>();

@@ -1,5 +1,5 @@
 import type { Due, Expense, Product, Sale, StockMovement } from "../types";
-import { daysBetween, todayISO } from "./id";
+import { addDays, daysBetween, localDateOf, todayISO } from "./id";
 
 // ---------- Margins ----------
 // Gross margin = (sell - cost) / sell. This is NOT markup, which would be (sell - cost) / cost.
@@ -163,6 +163,33 @@ export function wastedInventoryValue(movements: StockMovement[], products: Produ
 }
 
 // ---------- Analytics ----------
+export interface WeekSalesDay {
+  key: string;
+  label: string;
+  total: number;
+}
+
+// Shared by the Dashboard's and Analytics' weekly sales charts, so both always agree on which
+// 7 days are shown and how much each one totals.
+export function buildWeekSalesData(sales: Sale[], today: string, weekdayLocale: string): WeekSalesDay[] {
+  const days: WeekSalesDay[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const dateKey = addDays(today, -i);
+    // Parsed with an explicit local time-of-day, not just new Date(dateKey) — a bare
+    // "YYYY-MM-DD" string parses as UTC midnight, which toLocaleDateString then renders back
+    // in the local timezone, silently shifting the weekday label a day off for anyone west
+    // of UTC (exactly a bar-label-vs-tooltip mismatch this avoids).
+    const label = new Date(`${dateKey}T00:00:00`).toLocaleDateString(weekdayLocale, { weekday: "short" });
+    days.push({ key: dateKey, label, total: 0 });
+  }
+  const indexByKey = new Map(days.map((d, idx) => [d.key, idx]));
+  for (const s of sales) {
+    const idx = indexByKey.get(localDateOf(s.date));
+    if (idx !== undefined) days[idx].total += s.total;
+  }
+  return days;
+}
+
 export function moneyInOutByMonth(sales: Sale[], expenses: Expense[], dues: Due[], months = 6, locale = "en-US") {
   const buckets: { key: string; label: string; moneyIn: number; moneyOut: number }[] = [];
   const now = new Date();

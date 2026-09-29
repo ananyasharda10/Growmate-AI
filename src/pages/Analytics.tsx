@@ -1,10 +1,19 @@
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useMemo } from "react";
+import { Bar, BarChart, CartesianGrid, LabelList, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useStore } from "../store/useStore";
 import { useT } from "../lib/i18n/useT";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { formatMoney } from "../lib/currency";
-import { bestMargins, moneyInOutByMonth, moveSpeed, topEarnersByRevenue, topSellersByUnits } from "../lib/calculations";
+import { todayISO } from "../lib/id";
+import {
+  bestMargins,
+  buildWeekSalesData,
+  moneyInOutByMonth,
+  moveSpeed,
+  topEarnersByRevenue,
+  topSellersByUnits,
+} from "../lib/calculations";
 
 export function Analytics() {
   const { t, language } = useT();
@@ -14,6 +23,10 @@ export function Analytics() {
   const dues = useStore((s) => s.dues);
   const currency = useStore((s) => s.settings.currency);
 
+  const weekData = useMemo(
+    () => buildWeekSalesData(sales, todayISO(), language === "hi" ? "hi-IN" : "en-US"),
+    [sales, language]
+  );
   const monthly = moneyInOutByMonth(sales, expenses, dues, 6, language === "hi" ? "hi-IN" : "en-US");
   const topSellers = topSellersByUnits(sales, products);
   const topEarners = topEarnersByRevenue(sales, products);
@@ -32,6 +45,30 @@ export function Analytics() {
         <h1 className="text-2xl font-bold text-gray-900">{t("analytics.title")}</h1>
         <p className="mt-1 text-sm text-gray-500">{t("analytics.subtitle")}</p>
       </div>
+
+      <Card className="mb-6 p-6">
+        <h2 className="mb-4 text-base font-semibold text-gray-900">{t("dashboard.weekSales")}</h2>
+        {weekData.every((d) => d.total === 0) ? (
+          <EmptyState text={t("dashboard.noSalesWeek")} />
+        ) : (
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={weekData} margin={{ top: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+              <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} tickFormatter={formatAxisMoney} />
+              <Tooltip formatter={(v) => [formatMoney(Number(v), currency), t("dashboard.chartSalesLabel")]} />
+              <Bar dataKey="total" name={t("dashboard.chartSalesLabel")} fill="#2f8f52" radius={[6, 6, 0, 0]} minPointSize={2}>
+                <LabelList
+                  dataKey="total"
+                  position="top"
+                  formatter={(v) => (typeof v === "number" ? formatMoney(v, currency) : "")}
+                  style={{ fontSize: 11, fill: "#374151" }}
+                />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </Card>
 
       <Card className="mb-6 p-6">
         <h2 className="mb-4 text-base font-semibold text-gray-900">{t("analytics.moneyInOutTitle")}</h2>
