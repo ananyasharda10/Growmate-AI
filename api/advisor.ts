@@ -134,7 +134,12 @@ Rules:
   time reasoning about whether a near-miss name might count.
 - When stating a product's quantity (stock, expiring stock, restock amounts, etc.), always
   use that product's own "unit" field from the data (e.g. "litre", "kg", "dozen", "piece") —
-  never the generic word "units".
+  never the generic word "units". The "unit" values in the data are always in English; in a
+  Hindi answer, translate them using the same terms the app's own UI uses (kg -> किलो,
+  lb -> पाउंड, gram -> ग्राम, litre -> लीटर, ml -> मिली, piece -> पीस, packet -> पैकेट,
+  box -> डिब्बा, dozen -> दर्जन) rather than leaving the English word in place — a real
+  failure seen in testing: a Hindi restock answer said "5 litre" and "50 piece" instead of
+  "5 लीटर" and "50 पीस".
 - For "what/how much should I restock" or similar, use the "restockSuggestions" list
   directly — it already contains exactly the products that need restocking and, in
   "suggestedQty" and "cost", exactly how much to buy and what it costs (this already
