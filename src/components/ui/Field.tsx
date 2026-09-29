@@ -54,7 +54,14 @@ export function NumberInput({
       inputMode="decimal"
       value={text}
       onFocus={(e) => {
-        e.target.select();
+        // A single "0" is a placeholder, not a value worth selecting-then-overtyping: a
+        // click can land the cursor before OR after that one character depending on exactly
+        // where in it you click, and select() doesn't reliably win that race either way —
+        // typing then either appends after the 0 ("0" + "4" -> "04") or inserts before it
+        // and pushes it to the end as each new digit lands ("0" -> "40" -> "430" -> "4350").
+        // Clearing it outright on focus sidesteps cursor position entirely.
+        if (text === "0") setText("");
+        else e.target.select();
         onFocus?.(e);
       }}
       onBlur={(e) => {
@@ -62,15 +69,8 @@ export function NumberInput({
         onBlur?.(e);
       }}
       onChange={(e) => {
-        let raw = e.target.value;
+        const raw = e.target.value;
         if (raw !== "" && raw !== "-" && !NUMERIC_DRAFT_PATTERN.test(raw)) return;
-        // A click can focus the field and place the cursor in the same tick, racing the
-        // select-on-focus above — when that race is lost, a leading "0" doesn't get
-        // selected, and the next digit lands after it instead of replacing it ("0" + "4"
-        // -> "04" instead of "4"). Stripping a leading zero whenever a digit follows it
-        // fixes this regardless of whether the selection actually happened, while leaving
-        // an in-progress decimal like "0.5" alone (only a digit after the zero triggers it).
-        raw = raw.replace(/^0+(?=\d)/, "");
         setText(raw);
         if (raw === "" || raw === "-") return;
         const parsed = Number(raw);
