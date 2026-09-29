@@ -10,7 +10,7 @@ import { formatMoney } from "../lib/currency";
 import { formatDate } from "../lib/dateFormat";
 import { cashOnHand, cashPaidForExpenses, cashReceivedFromSales, duePaymentsTotal } from "../lib/calculations";
 import { PAYMENT_METHODS, EXPENSE_CATEGORY_VALUES, type Currency, type Expense, type ExpenseCategory, type PaymentMethod, type Sale } from "../types";
-import { localDateOf, nowISO } from "../lib/id";
+import { localDateOf, nowISO, todayISO } from "../lib/id";
 
 const MAX_AMOUNT = 10_000_000;
 const NOTE_MAX_LENGTH = 200;
@@ -56,6 +56,7 @@ export function MoneyInOut() {
   const [expNote, setExpNote] = useState("");
   const [expProductId, setExpProductId] = useState("");
   const [expQty, setExpQty] = useState(1);
+  const [expDate, setExpDate] = useState(todayISO());
   const [expError, setExpError] = useState("");
 
   const [confirmOverstockOpen, setConfirmOverstockOpen] = useState(false);
@@ -147,6 +148,11 @@ export function MoneyInOut() {
       paymentMethod: expPayment,
       supplierName: expPayment === "credit" ? expSupplier : undefined,
       note: expNote || undefined,
+      // A bare "YYYY-MM-DD" from the date input, given an explicit local time-of-day rather
+      // than passed as-is — expense.date is read elsewhere via localDateOf(), which expects a
+      // full instant and would otherwise re-parse a date-only string as UTC midnight and
+      // shift it a day for anyone west of UTC.
+      date: new Date(`${expDate}T00:00:00`).toISOString(),
     });
     if (expCategory === "inventory_purchase" && expProductId && expQty > 0) {
       stockIn(expProductId, expQty, expNote || undefined);
@@ -156,6 +162,7 @@ export function MoneyInOut() {
     setExpSupplier("");
     setExpProductId("");
     setExpQty(1);
+    setExpDate(todayISO());
   }
 
   // Every one of these rows feeds directly into Money In / Money Out / Cash on hand above —
@@ -298,6 +305,10 @@ export function MoneyInOut() {
             <div>
               <Label>{t("money.amountLabel")}</Label>
               <NumberInput value={expAmount} onChange={setExpAmount} />
+            </div>
+            <div>
+              <Label>{t("money.expenseDateLabel")}</Label>
+              <Input type="date" max={todayISO()} value={expDate} onChange={(e) => setExpDate(e.target.value)} />
             </div>
             <div>
               <Label>{t("money.categoryLabel")}</Label>
@@ -610,6 +621,7 @@ function EditExpenseForm({
   const [category, setCategory] = useState<ExpenseCategory>(expense.category);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(expense.paymentMethod);
   const [note, setNote] = useState(expense.note ?? "");
+  const [date, setDate] = useState(localDateOf(expense.date));
   const [error, setError] = useState("");
 
   return (
@@ -617,6 +629,10 @@ function EditExpenseForm({
       <div>
         <Label>{t("money.amountLabel")}</Label>
         <NumberInput value={amount} onChange={setAmount} />
+      </div>
+      <div>
+        <Label>{t("money.expenseDateLabel")}</Label>
+        <Input type="date" max={todayISO()} value={date} onChange={(e) => setDate(e.target.value)} />
       </div>
       <div>
         <Label>{t("money.categoryLabel")}</Label>
@@ -654,7 +670,7 @@ function EditExpenseForm({
               setError(t("money.invalidAmount"));
               return;
             }
-            onSave({ amount, category, paymentMethod, note: note || undefined, date: nowISO() });
+            onSave({ amount, category, paymentMethod, note: note || undefined, date: new Date(`${date}T00:00:00`).toISOString() });
           }}
         >
           {t("money.saveChangesBtn")}

@@ -231,6 +231,7 @@ const hi: Translations = {
     addToTodaysSalesBtn: "आज की बिक्री में जोड़ें",
     recordExpenseTitle: "खर्च दर्ज करें",
     amountLabel: "राशि",
+    expenseDateLabel: "तारीख़",
     categoryLabel: "श्रेणी",
     supplierNameLabel: "सप्लायर का नाम",
     whoOwePlaceholder: "आपको किसे पैसे देने हैं?",

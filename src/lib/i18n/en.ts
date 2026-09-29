@@ -229,6 +229,7 @@ const en = {
     addToTodaysSalesBtn: "Add to today's sales",
     recordExpenseTitle: "Record an expense",
     amountLabel: "Amount",
+    expenseDateLabel: "Date",
     categoryLabel: "Category",
     supplierNameLabel: "Supplier name",
     whoOwePlaceholder: "Who do you owe?",

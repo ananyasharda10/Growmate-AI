@@ -10,6 +10,8 @@ import { ConfirmDialog, Modal } from "../components/ui/Modal";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { BUSINESS_TYPE_VALUES, type BusinessType, type Currency, type Product } from "../types";
 
+const MAX_BUSINESS_NAME_LENGTH = 100;
+
 function downloadCSV(filename: string, rows: (string | number | undefined)[][]) {
   const csv = rows.map((row) => row.map((cell) => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -171,7 +173,7 @@ export function Settings() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label>{t("settings.businessNameLabel")}</Label>
-            <Input value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
+            <Input maxLength={MAX_BUSINESS_NAME_LENGTH} value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
           </div>
           <div>
             <Label>{t("settings.businessTypeLabel")}</Label>
