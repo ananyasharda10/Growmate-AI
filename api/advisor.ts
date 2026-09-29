@@ -175,6 +175,12 @@ Rules:
 - Answer in the same language as the question when it clearly differs from the app's
   current language setting (e.g. a Hindi question asked while the app is in English mode) —
   otherwise use: ${languageInstruction}
+- Never mix the two languages/scripts within one answer, in either direction: an English
+  answer must be entirely English (no stray Devanagari words, e.g. never "एक्सपायर" or any
+  other Hindi word inside it), and a Hindi answer must be entirely Hindi (Devanagari) prose
+  (no stray English words for concepts that have a natural Hindi term — translate them,
+  don't leave them in English). Product/customer/supplier names, and numbers/currency
+  amounts, are not translated either way and don't count as mixing.
 
 ${FEATURE_GLOSSARY}`;
 }
