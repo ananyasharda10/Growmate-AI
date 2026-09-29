@@ -192,6 +192,13 @@ const hi: Translations = {
     nameTooLong: "उत्पाद का नाम {{max}} अक्षरों से ज़्यादा नहीं हो सकता।",
     priceTooHigh: "कीमत असामान्य रूप से ज़्यादा है। कृपया राशि दोबारा जांचें।",
     negativeMarginWarning: "कॉस्ट, सेल प्राइस से ज़्यादा है — यह {{percent}}% मार्जिन है (हर बिक्री पर नुकसान)।",
+    unitChangeTitle: "यूनिट बदली गई",
+    unitChangeMsg: "आपने यूनिट {{from}} से {{to}} में बदल दी है, लेकिन स्टॉक की संख्या ({{stock}}) अभी वैसी ही है। इसे कन्वर्ट करें, या नई यूनिट के साथ वही संख्या रखें?",
+    unitChangeConvertBtn: "{{result}} में कन्वर्ट करें",
+    unitChangeKeepBtn: "वही संख्या रखें",
+    unitChangeDoneTitle: "स्टॉक अपडेट हुआ",
+    unitChangeConvertedMsg: "{{from}} को {{to}} में बदला गया।",
+    unitChangeKeptMsg: "संख्या वैसी ही रखी गई: {{stock}} {{unit}}।",
   },
 
   money: {
@@ -248,6 +255,7 @@ const hi: Translations = {
     quantityReceivedLabel: "मिली हुई मात्रा",
     invalidQuantity: "मात्रा शून्य से अधिक होनी चाहिए।",
     invalidAmount: "राशि शून्य से अधिक होनी चाहिए।",
+    amountTooHigh: "राशि असामान्य रूप से ज़्यादा है। कृपया इसे दोबारा जांचें।",
     cashSaleLabel: "कैश सेल",
     duePaymentFromLabel: "{{name}} से भुगतान मिला",
     duePaymentToLabel: "{{name}} को भुगतान किया",

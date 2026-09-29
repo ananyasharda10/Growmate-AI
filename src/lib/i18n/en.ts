@@ -190,6 +190,13 @@ const en = {
     nameTooLong: "Product name can't be longer than {{max}} characters.",
     priceTooHigh: "Price is unreasonably high. Please double-check the amount.",
     negativeMarginWarning: "Cost is higher than sell price — this is a {{percent}}% margin (a loss on every sale).",
+    unitChangeTitle: "Unit changed",
+    unitChangeMsg: "You changed the unit from {{from}} to {{to}}, but the stock number ({{stock}}) hasn't been touched yet. Convert it, or keep the same number under the new unit?",
+    unitChangeConvertBtn: "Convert to {{result}}",
+    unitChangeKeepBtn: "Keep the same number",
+    unitChangeDoneTitle: "Stock updated",
+    unitChangeConvertedMsg: "Converted {{from}} to {{to}}.",
+    unitChangeKeptMsg: "Kept the number as-is: {{stock}} {{unit}}.",
   },
 
   money: {
@@ -246,6 +253,7 @@ const en = {
     quantityReceivedLabel: "Quantity received",
     invalidQuantity: "Quantity must be greater than zero.",
     invalidAmount: "Amount must be greater than zero.",
+    amountTooHigh: "Amount is unreasonably high. Please double-check it.",
     cashSaleLabel: "Cash sale",
     duePaymentFromLabel: "Payment received from {{name}}",
     duePaymentToLabel: "Payment made to {{name}}",

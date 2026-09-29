@@ -12,6 +12,9 @@ import { cashOnHand, cashPaidForExpenses, cashReceivedFromSales, duePaymentsTota
 import { PAYMENT_METHODS, EXPENSE_CATEGORY_VALUES, type Currency, type Expense, type ExpenseCategory, type PaymentMethod, type Sale } from "../types";
 import { localDateOf, nowISO } from "../lib/id";
 
+const MAX_AMOUNT = 10_000_000;
+const NOTE_MAX_LENGTH = 200;
+
 export function MoneyInOut() {
   const { t, language } = useT();
   const allProducts = useStore((s) => s.products);
@@ -43,6 +46,7 @@ export function MoneyInOut() {
   const [quickAmount, setQuickAmount] = useState(0);
   const [quickNote, setQuickNote] = useState("");
   const [quickPayment, setQuickPayment] = useState<PaymentMethod>("cash");
+  const [quickError, setQuickError] = useState("");
 
   // Expense
   const [expAmount, setExpAmount] = useState(0);
@@ -52,6 +56,7 @@ export function MoneyInOut() {
   const [expNote, setExpNote] = useState("");
   const [expProductId, setExpProductId] = useState("");
   const [expQty, setExpQty] = useState(1);
+  const [expError, setExpError] = useState("");
 
   const [confirmOverstockOpen, setConfirmOverstockOpen] = useState(false);
 
@@ -101,7 +106,18 @@ export function MoneyInOut() {
   }
 
   function submitQuickSale() {
-    if (quickAmount <= 0) return;
+    setQuickError("");
+    // A tiny positive amount (e.g. 0.001) rounds to "0.00" once formatted, so it must be
+    // rejected the same as a literal zero — otherwise a technically-nonzero sale creates a
+    // visible "+₹0.00" row that looks exactly like the zero-amount bug this guards against.
+    if (Math.round(quickAmount * 100) < 1) {
+      setQuickError(t("money.invalidAmount"));
+      return;
+    }
+    if (quickAmount > MAX_AMOUNT) {
+      setQuickError(t("money.amountTooHigh"));
+      return;
+    }
     recordSale({
       productName: "Cash sale",
       quantity: 1,
@@ -116,7 +132,15 @@ export function MoneyInOut() {
   }
 
   function submitExpense() {
-    if (expAmount <= 0) return;
+    setExpError("");
+    if (Math.round(expAmount * 100) < 1) {
+      setExpError(t("money.invalidAmount"));
+      return;
+    }
+    if (expAmount > MAX_AMOUNT) {
+      setExpError(t("money.amountTooHigh"));
+      return;
+    }
     recordExpense({
       amount: expAmount,
       category: expCategory,
@@ -218,7 +242,7 @@ export function MoneyInOut() {
               )}
               <div>
                 <Label>{t("money.noteOptionalLabel")}</Label>
-                <Input value={saleNote} onChange={(e) => setSaleNote(e.target.value)} />
+                <Input maxLength={NOTE_MAX_LENGTH} value={saleNote} onChange={(e) => setSaleNote(e.target.value)} />
               </div>
               {selectedProduct && (
                 <p className="text-sm text-gray-500">
@@ -251,8 +275,14 @@ export function MoneyInOut() {
               </div>
               <div>
                 <Label>{t("money.noteOptionalLabel")}</Label>
-                <Input value={quickNote} onChange={(e) => setQuickNote(e.target.value)} placeholder={t("money.morningRushPlaceholder")} />
+                <Input
+                  maxLength={NOTE_MAX_LENGTH}
+                  value={quickNote}
+                  onChange={(e) => setQuickNote(e.target.value)}
+                  placeholder={t("money.morningRushPlaceholder")}
+                />
               </div>
+              {quickError && <p className="text-sm text-red-600">{quickError}</p>}
               <Button fullWidth variant="secondary" onClick={submitQuickSale}>
                 {t("money.addToTodaysSalesBtn")}
               </Button>
@@ -318,7 +348,7 @@ export function MoneyInOut() {
             )}
             <div className="sm:col-span-2">
               <Label>{t("money.noteOptionalLabel")}</Label>
-              <Input value={expNote} onChange={(e) => setExpNote(e.target.value)} />
+              <Input maxLength={NOTE_MAX_LENGTH} value={expNote} onChange={(e) => setExpNote(e.target.value)} />
             </div>
           </div>
           {expPayment === "credit" && (
@@ -327,6 +357,7 @@ export function MoneyInOut() {
           {expCategory === "inventory_purchase" && expProductId && (
             <p className="mt-2 text-xs text-gray-400">{t("money.linkProductNote")}</p>
           )}
+          {expError && <p className="mt-2 text-sm text-red-600">{expError}</p>}
           <Button className="mt-4" onClick={submitExpense}>
             {t("money.recordExpenseBtn")}
           </Button>

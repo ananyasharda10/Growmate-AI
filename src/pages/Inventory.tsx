@@ -39,8 +39,34 @@ const emptyForm = {
   supplier: "",
 };
 
+interface ProductFormPayload {
+  name: string;
+  unit: Unit;
+  cost: number;
+  sell: number;
+  stock: number;
+  reorderLevel: number;
+  expiryDate?: string;
+  supplier?: string;
+}
+
 const LARGE_QTY_THRESHOLD = 10000;
 const MAX_NAME_LENGTH = 100;
+
+// Only pairs where a straightforward numeric conversion actually makes sense. Anything else
+// (e.g. piece <-> kg) has no sensible automatic factor, so the user is only ever offered to
+// keep the number as-is for those.
+const UNIT_CONVERSION: Partial<Record<Unit, Partial<Record<Unit, number>>>> = {
+  kg: { gram: 1000, lb: 2.2046226218 },
+  gram: { kg: 0.001, lb: 0.0022046226 },
+  lb: { kg: 0.45359237, gram: 453.59237 },
+  litre: { ml: 1000 },
+  ml: { litre: 0.001 },
+};
+
+function getConversionFactor(from: Unit, to: Unit): number | undefined {
+  return UNIT_CONVERSION[from]?.[to];
+}
 const MAX_PRICE = 10_000_000;
 const MAX_DISPLAYED_DAYS = 999;
 
@@ -76,7 +102,11 @@ export function Inventory() {
   const [adjustNote, setAdjustNote] = useState("");
   const [adjustError, setAdjustError] = useState("");
 
-  const [pendingLargeQty, setPendingLargeQty] = useState<{ type: "stockIn" | "adjust"; qty: number } | null>(null);
+  const [pendingLargeQty, setPendingLargeQty] = useState<{ type: "stockIn" | "adjust" | "productForm"; qty: number } | null>(null);
+  const [pendingProductPayload, setPendingProductPayload] = useState<ProductFormPayload | null>(null);
+  const [pendingProductResultMsg, setPendingProductResultMsg] = useState<string | null>(null);
+  const [pendingUnitChange, setPendingUnitChange] = useState<{ payload: ProductFormPayload; from: Unit; to: Unit } | null>(null);
+  const [unitChangeResultMsg, setUnitChangeResultMsg] = useState<string | null>(null);
 
   const [historyTarget, setHistoryTarget] = useState<Product | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
@@ -153,12 +183,37 @@ export function Inventory() {
       return;
     }
     setFormError("");
+
+    // Changing the unit relabels the same stock number without converting it (15 litre
+    // silently becoming 15 kg) unless the user is explicitly asked what they meant.
+    if (editing && editing.unit !== payload.unit && payload.stock > 0) {
+      setPendingUnitChange({ payload, from: editing.unit, to: payload.unit });
+      return;
+    }
+    proceedAfterUnitCheck(payload);
+  }
+
+  // resultMsg (the unit-change outcome) is only ever shown once the product is actually
+  // committed — it must survive an intermediate large-quantity confirmation, not fire the
+  // moment the unit choice is made, or it would claim a change was saved before it was.
+  function proceedAfterUnitCheck(payload: ProductFormPayload, resultMsg?: string) {
+    if (payload.stock > LARGE_QTY_THRESHOLD) {
+      setPendingProductPayload(payload);
+      setPendingProductResultMsg(resultMsg ?? null);
+      setPendingLargeQty({ type: "productForm", qty: payload.stock });
+      return;
+    }
+    commitProductForm(payload, resultMsg);
+  }
+
+  function commitProductForm(payload: ProductFormPayload, resultMsg?: string) {
     if (editing) {
       updateProduct(editing.id, payload);
     } else {
       addProduct(payload);
     }
     setFormOpen(false);
+    if (resultMsg) setUnitChangeResultMsg(resultMsg);
   }
 
   async function confirmDelete() {
@@ -514,9 +569,86 @@ export function Inventory() {
         onConfirm={() => {
           if (pendingLargeQty?.type === "stockIn") doStockIn();
           if (pendingLargeQty?.type === "adjust") doAdjust();
+          if (pendingLargeQty?.type === "productForm" && pendingProductPayload) {
+            commitProductForm(pendingProductPayload, pendingProductResultMsg ?? undefined);
+          }
           setPendingLargeQty(null);
+          setPendingProductPayload(null);
+          setPendingProductResultMsg(null);
         }}
-        onCancel={() => setPendingLargeQty(null)}
+        onCancel={() => {
+          setPendingLargeQty(null);
+          setPendingProductPayload(null);
+          setPendingProductResultMsg(null);
+        }}
+      />
+
+      <Modal
+        open={!!pendingUnitChange}
+        onClose={() => setPendingUnitChange(null)}
+        title={t("inventory.unitChangeTitle")}
+      >
+        {pendingUnitChange && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              {t("inventory.unitChangeMsg", {
+                stock: pendingUnitChange.payload.stock,
+                from: t(`enums.unit.${pendingUnitChange.from}`),
+                to: t(`enums.unit.${pendingUnitChange.to}`),
+              })}
+            </p>
+            <div className="flex flex-col gap-2">
+              {(() => {
+                const factor = getConversionFactor(pendingUnitChange.from, pendingUnitChange.to);
+                if (!factor) return null;
+                const converted = Math.round(pendingUnitChange.payload.stock * factor * 100) / 100;
+                return (
+                  <Button
+                    fullWidth
+                    onClick={() => {
+                      const payload = { ...pendingUnitChange.payload, stock: converted };
+                      const resultMsg = t("inventory.unitChangeConvertedMsg", {
+                        from: `${pendingUnitChange.payload.stock} ${t(`enums.unit.${pendingUnitChange.from}`)}`,
+                        to: `${converted} ${t(`enums.unit.${pendingUnitChange.to}`)}`,
+                      });
+                      setPendingUnitChange(null);
+                      proceedAfterUnitCheck(payload, resultMsg);
+                    }}
+                  >
+                    {t("inventory.unitChangeConvertBtn", { result: `${converted} ${t(`enums.unit.${pendingUnitChange.to}`)}` })}
+                  </Button>
+                );
+              })()}
+              <Button
+                fullWidth
+                variant="outline"
+                onClick={() => {
+                  const payload = pendingUnitChange.payload;
+                  const resultMsg = t("inventory.unitChangeKeptMsg", {
+                    stock: payload.stock,
+                    unit: t(`enums.unit.${pendingUnitChange.to}`),
+                  });
+                  setPendingUnitChange(null);
+                  proceedAfterUnitCheck(payload, resultMsg);
+                }}
+              >
+                {t("inventory.unitChangeKeepBtn")}
+              </Button>
+              <Button fullWidth variant="ghost" onClick={() => setPendingUnitChange(null)}>
+                {t("common.cancel")}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <ConfirmDialog
+        open={!!unitChangeResultMsg}
+        title={t("inventory.unitChangeDoneTitle")}
+        message={unitChangeResultMsg ?? ""}
+        confirmLabel={t("common.gotIt")}
+        onConfirm={() => setUnitChangeResultMsg(null)}
+        onCancel={() => setUnitChangeResultMsg(null)}
       />
 
       <ConfirmDialog
