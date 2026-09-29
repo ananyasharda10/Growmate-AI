@@ -403,7 +403,12 @@ const en = {
     deleteForeverBtn: "Delete forever",
     deleteForeverTitle: "Delete this product forever?",
     deleteForeverMsg: '"{{name}}" and its stock history will be permanently removed. This cannot be undone.',
-    currencyLockedNote: "Currency can't be changed once you have data recorded, since amounts aren't converted — only the symbol would change.",
+    convertCurrencyTitle: "Convert your amounts?",
+    convertCurrencyMsg: "Switching from {{from}} to {{to}} will convert every recorded amount (products, sales, expenses, dues, opening cash) using the exchange rate below — not just relabel them.",
+    exchangeRateLabel: "Exchange rate (1 USD = ₹___)",
+    convertBtn: "Convert",
+    convertedTitle: "Converted",
+    convertedMsg: "All amounts have been converted to {{currency}} at a rate of 1 USD = ₹{{rate}}.",
   },
 
   onboarding: {

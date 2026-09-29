@@ -65,6 +65,10 @@ test("3. resetting demo data preserves the currently selected currency", async (
   // relative to the "Currency" label text instead of getByLabel.
   const currencySelect = page.locator("label", { hasText: "Currency" }).locator("xpath=following-sibling::select");
   await currencySelect.selectOption("USD");
+  // Demo data has convertible amounts in it, so this opens the exchange-rate confirmation
+  // instead of applying immediately.
+  await page.getByRole("button", { name: "Convert", exact: true }).click();
+  await page.getByRole("button", { name: "Got it" }).click();
   await expect(currencySelect).toHaveValue("USD");
 
   await page.getByRole("button", { name: "Load / reset demo data" }).click();

@@ -4,6 +4,7 @@ import { t, type Language } from "../lib/i18n";
 import type {
   AdvisorTurn,
   BusinessSettings,
+  Currency,
   Due,
   DueType,
   Expense,
@@ -74,6 +75,7 @@ interface StoreState {
   dismissSyncError: () => void;
 
   updateSettings: (partial: Partial<BusinessSettings>) => void;
+  convertCurrency: (newCurrency: Currency, rate: number) => void;
 
   addProduct: (input: Omit<Product, "id" | "createdAt" | "archived">) => void;
   updateProduct: (productId: string, partial: Partial<Product>) => void;
@@ -336,6 +338,47 @@ export const useStore = create<StoreState>()(
             set({ syncError: `${t(get().language, "sync.settingsSaveFailed")} [${describeSupabaseError(error)}]` });
           }
         });
+    },
+
+    // Switching currency used to just relabel every amount without converting it (100 rupees
+    // becoming "$100"). `rate` is always given as "1 USD = ₹rate" regardless of direction, so
+    // the caller (a single exchange-rate input) doesn't need to know which way the multiplier
+    // goes — that's worked out here from which currency is being switched to.
+    convertCurrency: (newCurrency, rate) => {
+      const s = get();
+      if (newCurrency === s.settings.currency) return;
+      const multiplier = newCurrency === "USD" ? 1 / rate : rate;
+      const convert = (n: number) => Math.round(n * multiplier * 100) / 100;
+
+      const prev = { products: s.products, sales: s.sales, expenses: s.expenses, dues: s.dues, settings: s.settings };
+
+      const products = s.products.map((p) => ({ ...p, cost: convert(p.cost), sell: convert(p.sell) }));
+      const sales = s.sales.map((sa) => ({
+        ...sa,
+        unitPrice: convert(sa.unitPrice),
+        unitCost: sa.unitCost !== undefined ? convert(sa.unitCost) : undefined,
+        total: convert(sa.total),
+      }));
+      const expenses = s.expenses.map((e) => ({ ...e, amount: convert(e.amount) }));
+      const dues = s.dues.map((d) => ({
+        ...d,
+        originalAmount: convert(d.originalAmount),
+        payments: d.payments.map((p) => ({ ...p, amount: convert(p.amount) })),
+      }));
+      const settings = { ...s.settings, currency: newCurrency, openingCashBalance: convert(s.settings.openingCashBalance) };
+
+      set({ products, sales, expenses, dues, settings });
+
+      if (s.isDemo || !s.session) return;
+      const uid = userId();
+      const writes: PromiseLike<{ error: unknown }>[] = [
+        supabase.from("business_settings").upsert({ user_id: uid, data: settings, updated_at: nowISO() }),
+        ...products.map((p) => supabase.from("products").update(productToRow(uid, p)).eq("id", p.id).eq("user_id", uid)),
+        ...sales.map((sa) => supabase.from("sales").update(saleToRow(uid, sa)).eq("id", sa.id).eq("user_id", uid)),
+        ...expenses.map((e) => supabase.from("expenses").update(expenseToRow(uid, e)).eq("id", e.id).eq("user_id", uid)),
+        ...dues.map((d) => supabase.from("dues").update(dueToRow(uid, d)).eq("id", d.id).eq("user_id", uid)),
+      ];
+      fireSync(writes, prev);
     },
 
     addProduct: (input) => {

@@ -6,7 +6,7 @@ import { supabase } from "../lib/supabaseClient";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Input, Label, NumberInput, Select } from "../components/ui/Field";
-import { ConfirmDialog } from "../components/ui/Modal";
+import { ConfirmDialog, Modal } from "../components/ui/Modal";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { BUSINESS_TYPE_VALUES, type BusinessType, type Currency, type Product } from "../types";
 
@@ -27,6 +27,7 @@ export function Settings() {
   const isDemo = useStore((s) => s.isDemo);
   const settings = useStore((s) => s.settings);
   const updateSettings = useStore((s) => s.updateSettings);
+  const convertCurrency = useStore((s) => s.convertCurrency);
   const products = useStore((s) => s.products);
   const sales = useStore((s) => s.sales);
   const expenses = useStore((s) => s.expenses);
@@ -49,15 +50,16 @@ export function Settings() {
   const [confirmDemoReset, setConfirmDemoReset] = useState(false);
   const [deleteForeverTarget, setDeleteForeverTarget] = useState<Product | null>(null);
   const [exportMsg, setExportMsg] = useState("");
+  const [pendingCurrency, setPendingCurrency] = useState<Currency | null>(null);
+  const [exchangeRate, setExchangeRate] = useState(83);
+  const [convertedMsg, setConvertedMsg] = useState("");
 
   const archivedProducts = products.filter((p) => p.archived);
-  // Switching currency only ever changed the displayed symbol — every amount already
-  // recorded stayed the same number, silently relabeled into a different currency. Since
-  // there's no exchange-rate conversion here, the only safe fix is to stop letting the
-  // currency change once there's real data it would mislabel. Demo data doesn't count as
-  // "real" here — it's fake and disposable, and locking it would make it impossible to ever
-  // try the app in USD mode, since demo data is preloaded from the very first screen.
-  const hasData = !isDemo && (products.length > 0 || sales.length > 0 || expenses.length > 0 || dues.length > 0);
+  // Whether switching currency would actually change any recorded amount — if nothing has
+  // been entered yet (a fresh account, or opening cash still at 0), there's nothing to
+  // convert and the currency can just switch outright.
+  const hasConvertibleData =
+    products.length > 0 || sales.length > 0 || expenses.length > 0 || dues.length > 0 || settings.openingCashBalance !== 0;
 
   function saveBusiness() {
     if (!businessName.trim()) {
@@ -185,13 +187,17 @@ export function Settings() {
             <Label>{t("settings.currencyLabel")}</Label>
             <Select
               value={currency}
-              disabled={hasData}
               onChange={(e) => {
-                // Applied immediately rather than waiting for "Save changes" below — every
-                // amount in the app is formatted from this value on every render, so leaving
-                // it in local-only state until Save meant navigating away silently discarded
-                // the change with no warning.
                 const next = e.target.value as Currency;
+                if (next === currency) return;
+                if (hasConvertibleData) {
+                  // Needs an exchange rate before anything actually changes, so this opens
+                  // a confirmation instead of applying immediately — unlike every other
+                  // field here, applying then letting the modal roll it back would mean
+                  // briefly showing converted-looking amounts under the old currency symbol.
+                  setPendingCurrency(next);
+                  return;
+                }
                 setCurrency(next);
                 updateSettings({ currency: next });
               }}
@@ -199,7 +205,6 @@ export function Settings() {
               <option value="INR">INR (₹)</option>
               <option value="USD">USD ($)</option>
             </Select>
-            {hasData && <p className="mt-1 text-xs text-gray-400">{t("settings.currencyLockedNote")}</p>}
           </div>
           <div>
             <Label>{t("settings.defaultLowStockLabel")}</Label>
@@ -296,6 +301,54 @@ export function Settings() {
           setDeleteForeverTarget(null);
         }}
         onCancel={() => setDeleteForeverTarget(null)}
+      />
+
+      <Modal open={!!pendingCurrency} onClose={() => setPendingCurrency(null)} title={t("settings.convertCurrencyTitle")}>
+        {pendingCurrency && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              {t("settings.convertCurrencyMsg", {
+                from: currency === "INR" ? "₹" : "$",
+                to: pendingCurrency === "INR" ? "₹" : "$",
+              })}
+            </p>
+            <div>
+              <Label>{t("settings.exchangeRateLabel")}</Label>
+              <NumberInput value={exchangeRate} onChange={setExchangeRate} />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" fullWidth onClick={() => setPendingCurrency(null)}>
+                {t("common.cancel")}
+              </Button>
+              <Button
+                fullWidth
+                disabled={exchangeRate <= 0}
+                onClick={() => {
+                  convertCurrency(pendingCurrency, exchangeRate);
+                  setCurrency(pendingCurrency);
+                  setConvertedMsg(
+                    t("settings.convertedMsg", {
+                      currency: pendingCurrency === "INR" ? "₹" : "$",
+                      rate: exchangeRate,
+                    })
+                  );
+                  setPendingCurrency(null);
+                }}
+              >
+                {t("settings.convertBtn")}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <ConfirmDialog
+        open={!!convertedMsg}
+        title={t("settings.convertedTitle")}
+        message={convertedMsg}
+        confirmLabel={t("common.gotIt")}
+        onConfirm={() => setConvertedMsg("")}
+        onCancel={() => setConvertedMsg("")}
       />
     </div>
   );
