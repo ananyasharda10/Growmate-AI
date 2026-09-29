@@ -1,6 +1,6 @@
 import type { Currency, Due, Expense, Product, Sale } from "../types";
 import { cashOnHand, dueAmountRemaining } from "./calculations";
-import { localDateOf } from "./id";
+import { localDateOf, todayISO, daysBetween } from "./id";
 
 export interface AskContext {
   products: Product[];
@@ -48,6 +48,24 @@ export const SAMPLE_QUESTION_IDS: QuestionId[] = [
   "explainExportDemo",
 ];
 
+// Recent-history arrays are capped to keep the whole context comfortably inside the
+// server's safety-net truncation limit (see api/advisor.ts) — the rolling-window stats
+// below cover the arithmetic questions (7-day revenue, 30-day profit, etc.) that would
+// otherwise need the model to filter/sum a raw list itself, so these caps don't need to be
+// large enough to hold a full month of a busy shop's history.
+// Kept small: Groq's free/on-demand tier caps at 8,000 tokens per minute total (prompt +
+// completion), and this context is by far the largest chunk of that budget on every
+// request. The rolling-window stats below already cover the arithmetic questions these raw
+// arrays used to be needed for, so they only need to be large enough for the occasional
+// specific lookup, not a full history.
+const MAX_RAW_SALES = 30;
+const MAX_RAW_EXPENSES = 30;
+
+function withinLastDays(dateISO: string, days: number, today: string): boolean {
+  const diff = daysBetween(dateISO, today);
+  return diff >= 0 && diff < days;
+}
+
 /**
  * Serializes the user's current business data into a compact summary for the LLM's
  * context window — this is the "retrieval" step: since the whole dataset is small and
@@ -55,6 +73,8 @@ export const SAMPLE_QUESTION_IDS: QuestionId[] = [
  * the relevant slice directly rather than a vector-search pipeline.
  */
 export function buildAdvisorContext(ctx: AskContext): string {
+  const today = todayISO();
+
   const products = ctx.products
     .filter((p) => !p.archived)
     .map((p) => ({
@@ -68,7 +88,77 @@ export function buildAdvisorContext(ctx: AskContext): string {
       supplier: p.supplier ?? null,
     }));
 
-  const recentSales = ctx.sales.slice(0, 200).map((s) => ({
+  // ---- Precomputed totals and rolling windows (never left for the model to sum itself) ----
+  // Every one of these mirrors a calculation the rest of the app already does (Dashboard,
+  // Money In/Out, Analytics), specifically so the advisor's numbers always match what's on
+  // screen instead of the model re-deriving — and possibly mis-deriving — its own totals
+  // from a raw, possibly-truncated list. This is the single most important part of the
+  // context: it is placed first in the returned JSON, before the bulkier raw arrays below,
+  // so that if the payload ever needs to be shortened, it's the raw history that gets cut,
+  // never these numbers.
+  const categoryTotals = new Map<string, number>();
+  for (const e of ctx.expenses) categoryTotals.set(e.category, (categoryTotals.get(e.category) ?? 0) + e.amount);
+  const totalExpenses = ctx.expenses.reduce((s, e) => s + e.amount, 0);
+  const expenseTotalsByCategory = [...categoryTotals.entries()]
+    .map(([category, total]) => ({ category, total, percentOfTotal: totalExpenses > 0 ? Math.round((total / totalExpenses) * 1000) / 10 : 0 }))
+    .sort((a, b) => b.total - a.total);
+
+  const knownCustomerNames = ctx.dues.filter((d) => d.type === "customer").map((d) => d.name);
+  const knownSupplierNames = ctx.dues.filter((d) => d.type === "supplier").map((d) => d.name);
+  const knownProductNames = products.map((p) => p.name);
+
+  const pendingCustomerDuesTotal = ctx.dues
+    .filter((d) => d.type === "customer" && d.status !== "settled")
+    .reduce((s, d) => s + dueAmountRemaining(d), 0);
+  const pendingSupplierDuesTotal = ctx.dues
+    .filter((d) => d.type === "supplier" && d.status !== "settled")
+    .reduce((s, d) => s + dueAmountRemaining(d), 0);
+  const currentCashOnHand = cashOnHand(ctx.openingCashBalance, ctx.sales, ctx.expenses, ctx.dues);
+  const projectedCashIfAllDuesSettled = currentCashOnHand + pendingCustomerDuesTotal - pendingSupplierDuesTotal;
+
+  // Dues due within the next 7 days — precomputed so "what's due soon" questions don't
+  // depend on the model correctly reasoning about today's date versus each due's date.
+  const upcomingDues = ctx.dues
+    .filter((d) => d.status !== "settled" && d.dueDate && daysBetween(today, d.dueDate) >= 0 && daysBetween(today, d.dueDate) <= 7)
+    .map((d) => ({ type: d.type, name: d.name, amountRemaining: dueAmountRemaining(d), dueDate: d.dueDate }));
+
+  // Rolling revenue windows, precomputed exactly (not left to the model to filter a raw
+  // list by date) — this is what "sales in the last 7 days" style questions should use.
+  function salesWindow(days: number) {
+    const inWindow = ctx.sales.filter((s) => withinLastDays(localDateOf(s.date), days, today));
+    return {
+      days,
+      transactionCount: inWindow.length,
+      revenue: inWindow.reduce((s, x) => s + x.total, 0),
+      dateRange: inWindow.length > 0 ? { from: [...inWindow].sort((a, b) => (a.date < b.date ? -1 : 1))[0].date.slice(0, 10), to: today } : null,
+    };
+  }
+  const salesLast7Days = salesWindow(7);
+  const salesLast30Days = salesWindow(30);
+
+  // Per-product 30-day sales/profit — precomputed exactly, for questions like "how much
+  // profit did X make in the last 30 days" (a known failure mode: the model otherwise tends
+  // to sum a product's ENTIRE sales history instead of respecting the stated window).
+  const productMap = new Map(ctx.products.map((p) => [p.name, p]));
+  const per30DayProduct = new Map<string, { qty: number; revenue: number; profit: number }>();
+  for (const s of ctx.sales) {
+    if (!withinLastDays(localDateOf(s.date), 30, today)) continue;
+    const product = s.productId ? productMap.get(s.productName) : undefined;
+    const unitCost = s.unitCost ?? product?.cost ?? 0;
+    const entry = per30DayProduct.get(s.productName) ?? { qty: 0, revenue: 0, profit: 0 };
+    entry.qty += s.quantity;
+    entry.revenue += s.total;
+    entry.profit += (s.unitPrice - unitCost) * s.quantity;
+    per30DayProduct.set(s.productName, entry);
+  }
+  const last30DaysByProduct = [...per30DayProduct.entries()].map(([product, stats]) => ({
+    product,
+    qtySold: stats.qty,
+    revenue: stats.revenue,
+    profit: Math.round(stats.profit * 100) / 100,
+  }));
+
+  const recentSales = ctx.sales.slice(0, MAX_RAW_SALES).map((s) => ({
     product: s.productName,
     quantity: s.quantity,
     unitPrice: s.unitPrice,
@@ -78,7 +168,7 @@ export function buildAdvisorContext(ctx: AskContext): string {
     customerName: s.customerName ?? null,
   }));
 
-  const recentExpenses = ctx.expenses.slice(0, 200).map((e) => ({
+  const recentExpenses = ctx.expenses.slice(0, MAX_RAW_EXPENSES).map((e) => ({
     category: e.category,
     amount: e.amount,
     paymentMethod: e.paymentMethod,
@@ -95,49 +185,27 @@ export function buildAdvisorContext(ctx: AskContext): string {
     dueDate: d.dueDate ?? null,
   }));
 
-  // Precomputed here, not left to the model: asking an LLM to aggregate a raw list into
-  // categories is exactly the kind of task where it intermittently invents plausible-sounding
-  // rows instead of literally summing what's there. Handing it the finished totals removes
-  // that failure mode for category-spending questions entirely.
-  const categoryTotals = new Map<string, number>();
-  for (const e of ctx.expenses) categoryTotals.set(e.category, (categoryTotals.get(e.category) ?? 0) + e.amount);
-  const expenseTotalsByCategory = [...categoryTotals.entries()]
-    .map(([category, total]) => ({ category, total }))
-    .sort((a, b) => b.total - a.total);
-
-  const knownCustomerNames = ctx.dues.filter((d) => d.type === "customer").map((d) => d.name);
-  const knownSupplierNames = ctx.dues.filter((d) => d.type === "supplier").map((d) => d.name);
-  const knownProductNames = products.map((p) => p.name);
-
-  // Same reasoning as expenseTotalsByCategory above: cash-on-hand and pending-dues totals
-  // involve summing across the sales/expenses/dues history, which can run well beyond what's
-  // included in recentSales/recentExpenses above. Precomputing them with the app's own
-  // calculations (the same functions the Dashboard and Money In/Out pages use) guarantees the
-  // advisor's cash answers always match the rest of the app instead of the model re-deriving
-  // — and possibly mis-deriving — its own totals from a partial list.
-  const pendingCustomerDuesTotal = ctx.dues
-    .filter((d) => d.type === "customer" && d.status !== "settled")
-    .reduce((s, d) => s + dueAmountRemaining(d), 0);
-  const pendingSupplierDuesTotal = ctx.dues
-    .filter((d) => d.type === "supplier" && d.status !== "settled")
-    .reduce((s, d) => s + dueAmountRemaining(d), 0);
-  const currentCashOnHand = cashOnHand(ctx.openingCashBalance, ctx.sales, ctx.expenses, ctx.dues);
-  const projectedCashIfAllDuesSettled = currentCashOnHand + pendingCustomerDuesTotal - pendingSupplierDuesTotal;
-
   return JSON.stringify({
+    // Precomputed summary fields first — see the comment above for why order matters here.
     currency: ctx.currency,
     openingCashBalance: ctx.openingCashBalance,
-    products,
-    recentSales,
-    recentExpenses,
-    expenseTotalsByCategory,
-    dues,
-    knownCustomerNames,
-    knownSupplierNames,
-    knownProductNames,
     currentCashOnHand,
     pendingCustomerDuesTotal,
     pendingSupplierDuesTotal,
     projectedCashIfAllDuesSettled,
+    upcomingDuesWithinSevenDays: upcomingDues,
+    expenseTotalsByCategory,
+    salesLast7Days,
+    salesLast30Days,
+    last30DaysByProduct,
+    knownCustomerNames,
+    knownSupplierNames,
+    knownProductNames,
+    products,
+    dues,
+    // Bulkier raw history last, and capped — only used for lookups the summaries above
+    // don't cover (e.g. "when did I last sell X").
+    recentSales,
+    recentExpenses,
   });
 }

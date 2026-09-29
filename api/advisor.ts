@@ -36,9 +36,11 @@ function dedupeRepeatedAnswer(text: string): string {
 const MAX_QUESTION_LENGTH = 500;
 // The model does its reasoning inside this same token budget before writing the final
 // answer, so a low limit risks the response getting cut off mid-thought for anything that
-// takes a few steps to work out (e.g. a cash projection across dues and past transactions),
-// leaving the visible answer empty. Generous headroom keeps that from happening.
-const MAX_TOKENS = 900;
+// takes a few steps to work out, leaving the visible answer empty. Now that the common
+// arithmetic (cash, dues, category shares, 7/30-day windows) is precomputed in the context
+// rather than left for the model to work out, it needs less reasoning room than before —
+// trimmed from 900 to help stay under Groq's free-tier per-minute token cap (see below).
+const MAX_TOKENS = 600;
 const REQUEST_TIMEOUT_MS = 20_000;
 
 const FEATURE_GLOSSARY = `
@@ -69,25 +71,45 @@ business owner understand their own numbers and use the app.
 
 Today's date: ${today}
 
-Here is the business's current data, as JSON (products, recent sales, recent expenses,
-a precomputed expense total per category, dues, the names of every real customer and
-supplier who has a due, opening cash balance, currency):
+Here is the business's current data, as JSON. The most important fields are precomputed
+totals — currentCashOnHand, pendingCustomerDuesTotal, pendingSupplierDuesTotal,
+projectedCashIfAllDuesSettled, upcomingDuesWithinSevenDays, expenseTotalsByCategory (each
+with a percentOfTotal), salesLast7Days, salesLast30Days, last30DaysByProduct — followed by
+the full product and dues lists, and finally a capped, recent-only sample of individual
+sales/expenses (recentSales/recentExpenses) for lookups the summaries don't cover:
 ${contextJson}
 
 Rules:
 - Only use the data above. Never invent products, amounts, categories, or people that
-  aren't in it.
-- If asked to calculate something (e.g. "what would I make if I sold 10 Rotis"), find the
-  relevant figures in the data and do the arithmetic yourself, showing the actual numbers.
-- If asked about spending by category (e.g. "where did my money go"), use ONLY the
-  "expenseTotalsByCategory" field, exactly as given — do not compute your own totals from
-  "recentExpenses", and never mention a category that isn't in that field.
-- If asked about current cash on hand, or a projection like "how much cash would I have if I
-  collected everything owed to me and/or paid everything I owe", use the given
-  "currentCashOnHand", "pendingCustomerDuesTotal", "pendingSupplierDuesTotal", and
-  "projectedCashIfAllDuesSettled" fields directly — do not re-derive these by summing
-  "recentSales", "recentExpenses", or "dues" yourself, since those lists may not cover the
-  full history behind those totals.
+  aren't in it. If a field described below is genuinely absent from the JSON (not just
+  hard to find), say so plainly rather than guessing — this should be rare, since the
+  common totals are always included.
+- Never write a raw JSON field name (e.g. "currentCashOnHand", "pendingSupplierDuesTotal")
+  in your answer — always translate it into a plain human phrase (e.g. "cash on hand",
+  "what you owe suppliers"). The field names are for your own lookup, not for the reader.
+- For current cash on hand, use "currentCashOnHand" directly.
+- For "how much would I have if I collected/paid everything", use "currentCashOnHand",
+  "pendingCustomerDuesTotal", "pendingSupplierDuesTotal", and
+  "projectedCashIfAllDuesSettled" directly — do not re-derive these by summing
+  "recentSales", "recentExpenses", or "dues" yourself, since those lists are only a recent
+  sample and don't cover the full history behind those totals.
+- For "what's due soon" / "what do I need to pay in the next few days", use
+  "upcomingDuesWithinSevenDays" directly — do not scan "dues" and compare dates yourself.
+- For spending by category or each category's share/percentage of total spending, use
+  ONLY "expenseTotalsByCategory" (including its "percentOfTotal") exactly as given — do not
+  compute your own totals or percentages from "recentExpenses", and never mention a
+  category that isn't in that field.
+- For "sales/revenue in the last 7 days", use "salesLast7Days" directly (it already gives
+  the revenue, transaction count, and date range) — do not filter "recentSales" by date
+  yourself, since that list may be capped and not represent the full 7-day window.
+- For "sales/profit for [product] in the last 30 days" or similar 30-day questions, use
+  "salesLast30Days" and "last30DaysByProduct" directly — these are already filtered to
+  exactly the last 30 days, so do not recompute the window from "recentSales" or count a
+  product's entire history instead of just the last 30 days.
+- If asked to calculate something not covered by a precomputed field (e.g. "what would I
+  make if I sold 10 Rotis"), find the relevant per-item figures (e.g. one product's cost
+  and sell price) and do that specific arithmetic yourself, showing the actual numbers —
+  this rule is for simple per-item math, not for re-summing a whole list.
 - If asked about a specific named person (a customer or supplier), first check whether that
   name (or an obvious close match) appears in "knownCustomerNames" or "knownSupplierNames".
   If it does not, say plainly that you couldn't find that person in the records — do
@@ -97,7 +119,6 @@ Rules:
   does not, answer immediately and say plainly that you couldn't find that product in the
   inventory — do NOT invent figures for it, describe a different product instead, or spend
   time reasoning about whether a near-miss name might count.
-- If the data needed to answer isn't present, say so plainly rather than guessing.
 - Keep answers brief and conversational — 1 to 3 short sentences, or a short list only if
   genuinely listing multiple items. Do not restate the raw JSON. Shorter answers are
   strongly preferred over longer ones.
@@ -105,7 +126,9 @@ Rules:
   display shows your response as-is, so markdown syntax would appear as literal characters.
   Use line breaks and "•" for lists if needed, nothing else.
 - Respond naturally to greetings or thanks without needing to reference the data.
-- ${languageInstruction}
+- Answer in the same language as the question when it clearly differs from the app's
+  current language setting (e.g. a Hindi question asked while the app is in English mode) —
+  otherwise use: ${languageInstruction}
 
 ${FEATURE_GLOSSARY}`;
 }
@@ -139,7 +162,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
   const lang = language === "hi" ? "hi" : "en";
-  const contextJson = typeof context === "string" ? context.slice(0, 20_000) : "{}";
+  // This used to cap at 20,000 characters — with a realistic transaction history that cut
+  // the string off mid-array, well before the precomputed totals near the end ever reached
+  // the model at all, so it (correctly, from what it could see) reported having no cash/dues
+  // data. askEngine.ts now puts the small precomputed summary fields first specifically so a
+  // truncation here only ever costs raw history detail, never those totals, but the cap is
+  // still raised generously so truncation shouldn't be needed at realistic data sizes.
+  const contextJson = typeof context === "string" ? context.slice(0, 100_000) : "{}";
   // The client sends its own local date — the server's clock could be in a different
   // timezone than the user's device, which is exactly the "today" bug this app has had to
   // fix elsewhere. Falls back to the server's UTC date only if the client didn't send one.
@@ -171,6 +200,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!groqRes.ok) {
       const detail = await groqRes.text().catch(() => "");
       console.error("Groq API error:", groqRes.status, detail);
+      if (groqRes.status === 429) {
+        // Groq's free/on-demand tier's per-minute token budget is tight enough that a burst
+        // of questions (or several people testing at once) can exhaust it; its error message
+        // includes exactly how long to wait, so surface that instead of a generic failure —
+        // this reads as "busy, try shortly," not "broken."
+        const waitMatch = detail.match(/try again in ([\d.]+)s/i);
+        const waitSeconds = waitMatch ? Math.ceil(Number(waitMatch[1])) : undefined;
+        res.status(429).json({
+          error: waitSeconds
+            ? `The advisor is getting a lot of questions right now — please wait about ${waitSeconds} seconds and try again.`
+            : "The advisor is getting a lot of questions right now — please wait a moment and try again.",
+        });
+        return;
+      }
       res.status(502).json({ error: "The advisor couldn't process that right now." });
       return;
     }

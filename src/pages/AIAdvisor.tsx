@@ -64,10 +64,14 @@ export function AIAdvisor() {
         signal: controller.signal,
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.answer) throw new Error(data?.error || "Request failed");
+      if (!res.ok || !data.answer) throw new Error(data?.error || "");
       resolveAdvisorTurn({ answer: data.answer });
-    } catch {
-      resolveAdvisorTurn({ answer: t("advisor.errorReply"), error: true });
+    } catch (err) {
+      // Surface the server's own message when it gave one (e.g. a specific rate-limit
+      // notice with a wait time) — it's more useful than the generic fallback, which should
+      // only be shown when the failure has no better explanation (a network drop, a timeout).
+      const serverMessage = err instanceof Error ? err.message : "";
+      resolveAdvisorTurn({ answer: serverMessage || t("advisor.errorReply"), error: true });
     } finally {
       clearTimeout(timeout);
       busyRef.current = false;
