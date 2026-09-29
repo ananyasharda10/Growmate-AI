@@ -76,9 +76,9 @@ Here is the business's current data, as JSON. The most important fields are prec
 totals — currentCashOnHand, pendingCustomerDuesTotal, pendingSupplierDuesTotal,
 projectedCashIfAllDuesSettled, upcomingDuesWithinSevenDays, restockSuggestions,
 expenseTotalsByCategory (each with a percentOfTotal), salesLast7Days, salesLast30Days,
-last30DaysByProduct — followed by the full product and dues lists, and finally a capped,
-recent-only sample of individual sales/expenses (recentSales/recentExpenses) for lookups the
-summaries don't cover:
+todayByProduct, last30DaysByProduct — followed by the full product and dues lists, and
+finally a capped, recent-only sample of individual sales/expenses (recentSales/recentExpenses)
+for lookups the summaries don't cover:
 ${contextJson}
 
 Rules:
@@ -108,6 +108,17 @@ Rules:
   "salesLast30Days" and "last30DaysByProduct" directly — these are already filtered to
   exactly the last 30 days, so do not recompute the window from "recentSales" or count a
   product's entire history instead of just the last 30 days.
+- For "today" / "right now" questions about a specific product (best margin today, what sold
+  today, etc.), use "todayByProduct" — NOT "last30DaysByProduct". These are two separate
+  fields for two separate windows; a real failure seen in testing was answering a "today"
+  question with the 30-day figures while calling it "today" or "right now". If a product has
+  no entry in "todayByProduct", it had no sales today — say that plainly rather than
+  substituting its 30-day number.
+- "todayByProduct" and "last30DaysByProduct" entries include an "archived" field. If a
+  product you're discussing from either list has "archived": true, mention that it's no
+  longer an active product (e.g. "archived, no longer in your inventory") rather than
+  discussing it as if it were still active — its past sales are still real history, but
+  presenting it like a current product to pay attention to would be misleading.
 - If asked to calculate something not covered by a precomputed field (e.g. "what would I
   make if I sold 10 Rotis"), find the relevant per-item figures (e.g. one product's cost
   and sell price) and do that specific arithmetic yourself, showing the actual numbers —
@@ -139,8 +150,11 @@ Rules:
     and isn't sellable, NOT that it's low or ran out — the quantity on hand is fine, it's the
     freshness that's the problem.
   - both conditions true: mention both reasons.
-  - In Hindi, always use "एक्सपायर" for expired (matching the Inventory page's own badge) —
-    never "समाप्त", which reads as "used up/finished" and gets confused with low stock.
+  - ONLY when your whole answer is in Hindi, use "एक्सपायर" for expired (matching the
+    Inventory page's own badge) instead of "समाप्त", which reads as "used up/finished" and
+    gets confused with low stock. When answering in English, always say "expired" — never
+    write the Hindi word "एक्सपायर" in an otherwise-English answer, a real failure seen in
+    testing.
   - For each product in a restock answer, show this much detail, one line per product: its
     name, current stock with unit, reorder level with unit, whether it's expired, the reason
     it needs restocking, and the exact quantity to buy from "suggestedQty". This is more

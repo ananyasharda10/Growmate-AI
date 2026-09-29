@@ -160,27 +160,39 @@ export function buildAdvisorContext(ctx: AskContext): string {
   const salesLast7Days = salesWindow(7);
   const salesLast30Days = salesWindow(30);
 
-  // Per-product 30-day sales/profit — precomputed exactly, for questions like "how much
-  // profit did X make in the last 30 days" (a known failure mode: the model otherwise tends
-  // to sum a product's ENTIRE sales history instead of respecting the stated window).
+  // Per-product sales/profit, for questions like "how much profit did X make in the last 30
+  // days" or "which product has the best margin today" — precomputed exactly (a known
+  // failure mode: the model otherwise tends to sum a product's ENTIRE sales history instead
+  // of respecting the stated window), and built separately for "today" vs "last 30 days" so
+  // a "today" question can't silently get answered from the 30-day figures instead — a real
+  // failure seen in testing, since only the 30-day breakdown existed before.
   const productMap = new Map(ctx.products.map((p) => [p.name, p]));
-  const per30DayProduct = new Map<string, { qty: number; revenue: number; profit: number }>();
-  for (const s of ctx.sales) {
-    if (!withinLastDays(localDateOf(s.date), 30, today)) continue;
-    const product = s.productId ? productMap.get(s.productName) : undefined;
-    const unitCost = s.unitCost ?? product?.cost ?? 0;
-    const entry = per30DayProduct.get(s.productName) ?? { qty: 0, revenue: 0, profit: 0 };
-    entry.qty += s.quantity;
-    entry.revenue += s.total;
-    entry.profit += (s.unitPrice - unitCost) * s.quantity;
-    per30DayProduct.set(s.productName, entry);
+  function perProductStats(days: number) {
+    const stats = new Map<string, { qty: number; revenue: number; profit: number }>();
+    for (const s of ctx.sales) {
+      if (!withinLastDays(localDateOf(s.date), days, today)) continue;
+      const product = s.productId ? productMap.get(s.productName) : undefined;
+      const unitCost = s.unitCost ?? product?.cost ?? 0;
+      const entry = stats.get(s.productName) ?? { qty: 0, revenue: 0, profit: 0 };
+      entry.qty += s.quantity;
+      entry.revenue += s.total;
+      entry.profit += (s.unitPrice - unitCost) * s.quantity;
+      stats.set(s.productName, entry);
+    }
+    return [...stats.entries()].map(([name, stat]) => ({
+      product: name,
+      qtySold: stat.qty,
+      revenue: stat.revenue,
+      profit: Math.round(stat.profit * 100) / 100,
+      // So the model can flag when a product it's discussing (from sales history) is no
+      // longer an active product, instead of talking about it as if it still were — a real
+      // failure seen in testing: an archived product's past profit was reported with no
+      // indication it's no longer in the active inventory.
+      archived: productMap.get(name)?.archived ?? false,
+    }));
   }
-  const last30DaysByProduct = [...per30DayProduct.entries()].map(([product, stats]) => ({
-    product,
-    qtySold: stats.qty,
-    revenue: stats.revenue,
-    profit: Math.round(stats.profit * 100) / 100,
-  }));
+  const todayByProduct = perProductStats(1);
+  const last30DaysByProduct = perProductStats(30);
 
   const recentSales = ctx.sales.slice(0, MAX_RAW_SALES).map((s) => ({
     product: s.productName,
@@ -222,6 +234,7 @@ export function buildAdvisorContext(ctx: AskContext): string {
     expenseTotalsByCategory,
     salesLast7Days,
     salesLast30Days,
+    todayByProduct,
     last30DaysByProduct,
     knownCustomerNames,
     knownSupplierNames,
