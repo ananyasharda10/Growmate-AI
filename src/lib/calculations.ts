@@ -105,7 +105,9 @@ export function buildRestockSuggestions(
   cashAvailable: number,
   upcomingSupplierDueTotal: number
 ): RestockSuggestion[] {
-  const needing = products.filter((p) => !p.archived && p.stock <= p.reorderLevel);
+  // Expired stock isn't sellable regardless of how much of it is sitting on the shelf, so it
+  // needs replacing even when the raw quantity is well above the reorder level.
+  const needing = products.filter((p) => !p.archived && (p.stock <= p.reorderLevel || isExpired(p)));
 
   let remainingCash = Math.max(0, cashAvailable - upcomingSupplierDueTotal);
   const results: RestockSuggestion[] = [];

@@ -1,5 +1,5 @@
 import type { Currency, Due, Expense, Product, Sale } from "../types";
-import { cashOnHand, dueAmountRemaining } from "./calculations";
+import { cashOnHand, dueAmountRemaining, isExpired } from "./calculations";
 import { localDateOf, todayISO, daysBetween } from "./id";
 
 export interface AskContext {
@@ -85,6 +85,11 @@ export function buildAdvisorContext(ctx: AskContext): string {
       stock: p.stock,
       reorderLevel: p.reorderLevel,
       expiryDate: p.expiryDate ?? null,
+      // Precomputed rather than left for the model to compare expiryDate against today
+      // itself — expired stock isn't sellable no matter how large the raw "stock" number
+      // is, so this is the one signal that determines whether a product needs restocking
+      // regardless of its quantity.
+      expired: isExpired(p, today),
       supplier: p.supplier ?? null,
     }));
 
