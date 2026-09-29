@@ -176,6 +176,24 @@ export const useStore = create<StoreState>()(
     });
   }
 
+  // Like fireSync, but awaits each write in order before starting the next — for the rare
+  // case where one write's row is a hard (not-null) foreign key target of the next (e.g. a
+  // new product's row must exist before its "created" stock_movements row can reference it).
+  // Promise.all starts every request at once with no ordering guarantee between them, which
+  // intermittently lost this exact race and violated stock_movements_product_id_fkey.
+  function fireSyncSequential(writes: PromiseLike<{ error: unknown }>[], prev: Partial<StoreState>) {
+    (async () => {
+      for (const write of writes) {
+        const { error } = await write;
+        if (error) {
+          console.error("Supabase write failed:", error);
+          set({ ...prev, syncError: `${t(get().language, "sync.saveFailed")} [${describeSupabaseError(error)}]` });
+          return;
+        }
+      }
+    })();
+  }
+
   function userId(): string {
     return get().session!.id;
   }
@@ -326,7 +344,10 @@ export const useStore = create<StoreState>()(
       const prev = { products: get().products, movements: get().movements };
       set((s) => ({ products: [...s.products, product], movements: [...s.movements, movement] }));
       if (get().isDemo) return;
-      fireSync(
+      // Sequential, not fireSync's usual parallel Promise.all: stock_movements.product_id is
+      // a not-null FK to products, so the product row must actually exist before the
+      // movement row referencing it is inserted.
+      fireSyncSequential(
         [
           supabase.from("products").insert(productToRow(userId(), product)),
           supabase.from("stock_movements").insert(movementToRow(userId(), movement)),
