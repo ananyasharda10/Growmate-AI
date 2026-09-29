@@ -107,6 +107,7 @@ export function Inventory() {
   const [pendingProductResultMsg, setPendingProductResultMsg] = useState<string | null>(null);
   const [pendingUnitChange, setPendingUnitChange] = useState<{ payload: ProductFormPayload; from: Unit; to: Unit } | null>(null);
   const [unitChangeResultMsg, setUnitChangeResultMsg] = useState<string | null>(null);
+  const [pendingZeroStock, setPendingZeroStock] = useState<ProductFormPayload | null>(null);
 
   const [historyTarget, setHistoryTarget] = useState<Product | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
@@ -183,6 +184,15 @@ export function Inventory() {
       return;
     }
     setFormError("");
+
+    // A brand-new product with 0 stock is easy to create by mistake (forgot to enter the
+    // quantity received) — worth an explicit confirmation, the same way a 0 sell price is
+    // rejected outright. Not applied to edits: a stock going down to 0 on an existing
+    // product (sold out) is a completely normal, frequent event, not a suspicious one.
+    if (!editing && payload.stock === 0) {
+      setPendingZeroStock(payload);
+      return;
+    }
 
     // Changing the unit relabels the same stock number without converting it (15 litre
     // silently becoming 15 kg) unless the user is explicitly asked what they meant.
@@ -581,6 +591,19 @@ export function Inventory() {
           setPendingProductPayload(null);
           setPendingProductResultMsg(null);
         }}
+      />
+
+      <ConfirmDialog
+        open={!!pendingZeroStock}
+        title={t("inventory.zeroStockTitle")}
+        message={t("inventory.zeroStockMsg")}
+        confirmLabel={t("inventory.zeroStockConfirmBtn")}
+        onConfirm={() => {
+          const payload = pendingZeroStock;
+          setPendingZeroStock(null);
+          if (payload) proceedAfterUnitCheck(payload);
+        }}
+        onCancel={() => setPendingZeroStock(null)}
       />
 
       <Modal

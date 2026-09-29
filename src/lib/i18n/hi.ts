@@ -199,6 +199,9 @@ const hi: Translations = {
     unitChangeDoneTitle: "स्टॉक अपडेट हुआ",
     unitChangeConvertedMsg: "{{from}} को {{to}} में बदला गया।",
     unitChangeKeptMsg: "संख्या वैसी ही रखी गई: {{stock}} {{unit}}।",
+    zeroStockTitle: "0 स्टॉक के साथ जोड़ें?",
+    zeroStockMsg: "इस प्रोडक्ट का स्टॉक 0 है। अगर अभी तक कोई माल नहीं आया है, तो ठीक है — स्टॉक बाद में जोड़ा जा सकता है। फिर भी जोड़ें?",
+    zeroStockConfirmBtn: "फिर भी जोड़ें",
   },
 
   money: {

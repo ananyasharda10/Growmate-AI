@@ -197,6 +197,9 @@ const en = {
     unitChangeDoneTitle: "Stock updated",
     unitChangeConvertedMsg: "Converted {{from}} to {{to}}.",
     unitChangeKeptMsg: "Kept the number as-is: {{stock}} {{unit}}.",
+    zeroStockTitle: "Add with zero stock?",
+    zeroStockMsg: "This product's stock is set to 0. If you haven't received any yet, that's fine — you can add stock later. Add it anyway?",
+    zeroStockConfirmBtn: "Add anyway",
   },
 
   money: {
