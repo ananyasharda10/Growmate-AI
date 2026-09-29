@@ -742,6 +742,10 @@ export const useStore = create<StoreState>()(
 
     loadDemoData: () => {
       const demo = buildDemoData();
+      // Keep whatever currency is already selected (including one the user just switched to
+      // in demo mode) — demo.settings.currency is only the fallback for the very first load,
+      // never something a later reset should overwrite.
+      const currency = get().settings.currency ?? demo.settings.currency;
       set({
         session: DEMO_SESSION,
         products: demo.products,
@@ -749,7 +753,7 @@ export const useStore = create<StoreState>()(
         sales: demo.sales,
         expenses: demo.expenses,
         dues: demo.dues,
-        settings: { ...get().settings, ...demo.settings, onboardingDismissed: true },
+        settings: { ...get().settings, ...demo.settings, currency, onboardingDismissed: true },
         isDemo: true,
         hydrated: true,
         syncError: null,
