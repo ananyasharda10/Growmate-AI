@@ -381,13 +381,26 @@ export function Inventory() {
                         </>
                       ) : (
                         <>
-                          <IconAction title={t("inventory.stockInTooltip")} onClick={() => setStockInTarget(p)}>
+                          <IconAction
+                            title={t("inventory.stockInTooltip")}
+                            onClick={() => {
+                              // Reset the quantity/note left over from whichever product this
+                              // dialog was last used for — otherwise the last-typed value
+                              // (e.g. "50") shows up as if it were this product's default.
+                              setStockInQty(1);
+                              setStockInNote("");
+                              setStockInTarget(p);
+                            }}
+                          >
                             <ArrowDownCircle size={16} />
                           </IconAction>
                           <IconAction
                             title={t("inventory.adjustTooltip")}
                             onClick={() => {
                               setAdjustError("");
+                              setAdjustType("damaged");
+                              setAdjustQty(1);
+                              setAdjustNote("");
                               setAdjustTarget(p);
                             }}
                           >

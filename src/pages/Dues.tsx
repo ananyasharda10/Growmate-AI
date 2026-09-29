@@ -111,7 +111,19 @@ export function Dues() {
           </p>
           <p className="mt-1 text-2xl font-bold text-gray-900">{formatMoney(total, currency)}</p>
         </div>
-        <Button icon={<Plus size={16} />} onClick={() => setAddOpen(true)}>
+        <Button
+          icon={<Plus size={16} />}
+          onClick={() => {
+            // Reset whatever was left over from a previous open (typed then cancelled, or a
+            // stale value from the last due added) — otherwise it reappears as if it were a
+            // default for this new entry.
+            setName("");
+            setAmount(0);
+            setDueDate("");
+            setNote("");
+            setAddOpen(true);
+          }}
+        >
           {t("dues.addBtn")}
         </Button>
       </Card>
