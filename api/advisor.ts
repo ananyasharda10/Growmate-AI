@@ -130,6 +130,8 @@ Rules:
     and isn't sellable, NOT that it's low or ran out — the quantity on hand is fine, it's the
     freshness that's the problem.
   - both conditions true: mention both reasons.
+  - In Hindi, always use "एक्सपायर" for expired (matching the Inventory page's own badge) —
+    never "समाप्त", which reads as "used up/finished" and gets confused with low stock.
 - Keep answers brief and conversational — 1 to 3 short sentences, or a short list only if
   genuinely listing multiple items. Do not restate the raw JSON. Shorter answers are
   strongly preferred over longer ones.
