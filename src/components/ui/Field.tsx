@@ -54,14 +54,15 @@ export function NumberInput({
       inputMode="decimal"
       value={text}
       onFocus={(e) => {
-        // A single "0" is a placeholder, not a value worth selecting-then-overtyping: a
-        // click can land the cursor before OR after that one character depending on exactly
-        // where in it you click, and select() doesn't reliably win that race either way —
-        // typing then either appends after the 0 ("0" + "4" -> "04") or inserts before it
-        // and pushes it to the end as each new digit lands ("0" -> "40" -> "430" -> "4350").
-        // Clearing it outright on focus sidesteps cursor position entirely.
-        if (text === "0") setText("");
-        else e.target.select();
+        // Clear on focus rather than relying on select() to highlight the existing value —
+        // select() doesn't reliably win the race with a click that both focuses the field
+        // and places the cursor in the same tick (a click can land the cursor before OR
+        // after a short value depending on exactly where in it you click, so typing can
+        // append after it, or insert before it and push it to the end character by
+        // character). Clearing outright sidesteps cursor position entirely, and is safe
+        // even for an existing value: clicking in then clicking away without typing anything
+        // reverts to the real value on blur below, so nothing is lost by only viewing it.
+        setText("");
         onFocus?.(e);
       }}
       onBlur={(e) => {
