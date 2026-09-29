@@ -48,22 +48,33 @@ export function Settings() {
 
   const [confirmDemoReset, setConfirmDemoReset] = useState(false);
   const [deleteForeverTarget, setDeleteForeverTarget] = useState<Product | null>(null);
+  const [exportMsg, setExportMsg] = useState("");
 
   const archivedProducts = products.filter((p) => p.archived);
   // Switching currency only ever changed the displayed symbol — every amount already
   // recorded stayed the same number, silently relabeled into a different currency. Since
   // there's no exchange-rate conversion here, the only safe fix is to stop letting the
-  // currency change once there's real data it would mislabel.
-  const hasData = products.length > 0 || sales.length > 0 || expenses.length > 0 || dues.length > 0;
+  // currency change once there's real data it would mislabel. Demo data doesn't count as
+  // "real" here — it's fake and disposable, and locking it would make it impossible to ever
+  // try the app in USD mode, since demo data is preloaded from the very first screen.
+  const hasData = !isDemo && (products.length > 0 || sales.length > 0 || expenses.length > 0 || dues.length > 0);
 
   function saveBusiness() {
-    if (lowStock < 0 || opening < 0) {
+    if (!businessName.trim()) {
+      setBusinessError(t("settings.nameRequired"));
+      return;
+    }
+    if (lowStock <= 0) {
+      setBusinessError(t("settings.lowStockMustBePositive"));
+      return;
+    }
+    if (opening < 0) {
       setBusinessError(t("settings.invalidNegativeValue"));
       return;
     }
     setBusinessError("");
     updateSettings({
-      businessName: businessName.trim() || "My Business",
+      businessName: businessName.trim(),
       businessType,
       currency,
       defaultLowStockLevel: lowStock,
@@ -92,23 +103,46 @@ export function Settings() {
     setConfirmPassword("");
   }
 
-  function exportAll() {
-    downloadCSV("products.csv", [
-      ["name", "unit", "cost", "sell", "stock", "reorderLevel", "expiryDate", "supplier", "archived"],
-      ...products.map((p) => [p.name, p.unit, p.cost, p.sell, p.stock, p.reorderLevel, p.expiryDate, p.supplier, String(p.archived)]),
-    ]);
-    downloadCSV("sales.csv", [
-      ["date", "product", "quantity", "unitPrice", "total", "paymentMethod", "customerName"],
-      ...sales.map((s) => [s.date, s.productName, s.quantity, s.unitPrice, s.total, s.paymentMethod, s.customerName]),
-    ]);
-    downloadCSV("expenses.csv", [
-      ["date", "category", "amount", "paymentMethod", "supplierName", "note"],
-      ...expenses.map((e) => [e.date, e.category, e.amount, e.paymentMethod, e.supplierName, e.note]),
-    ]);
-    downloadCSV("dues.csv", [
-      ["type", "name", "originalAmount", "amountPaid", "status", "dueDate"],
-      ...dues.map((d) => [d.type, d.name, d.originalAmount, d.payments.reduce((s, p) => s + p.amount, 0), d.status, d.dueDate]),
-    ]);
+  async function exportAll() {
+    setExportMsg("");
+    // Browsers block several near-simultaneous programmatic downloads triggered from one
+    // click (only the first one or two go through, the rest are silently dropped) — a short
+    // stagger between each file avoids that, so all four CSVs actually download.
+    const files: [string, (string | number | undefined)[][]][] = [
+      [
+        "products.csv",
+        [
+          ["name", "unit", "cost", "sell", "stock", "reorderLevel", "expiryDate", "supplier", "archived"],
+          ...products.map((p) => [p.name, p.unit, p.cost, p.sell, p.stock, p.reorderLevel, p.expiryDate, p.supplier, String(p.archived)]),
+        ],
+      ],
+      [
+        "sales.csv",
+        [
+          ["date", "product", "quantity", "unitPrice", "total", "paymentMethod", "customerName"],
+          ...sales.map((s) => [s.date, s.productName, s.quantity, s.unitPrice, s.total, s.paymentMethod, s.customerName]),
+        ],
+      ],
+      [
+        "expenses.csv",
+        [
+          ["date", "category", "amount", "paymentMethod", "supplierName", "note"],
+          ...expenses.map((e) => [e.date, e.category, e.amount, e.paymentMethod, e.supplierName, e.note]),
+        ],
+      ],
+      [
+        "dues.csv",
+        [
+          ["type", "name", "originalAmount", "amountPaid", "status", "dueDate"],
+          ...dues.map((d) => [d.type, d.name, d.originalAmount, d.payments.reduce((s, p) => s + p.amount, 0), d.status, d.dueDate]),
+        ],
+      ],
+    ];
+    for (const [filename, rows] of files) {
+      downloadCSV(filename, rows);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+    setExportMsg(t("settings.exportDoneMsg"));
   }
 
   return (
@@ -235,6 +269,7 @@ export function Settings() {
           </Button>
         </div>
         <p className="mt-2 text-xs text-gray-400">{t("settings.resetDemoNote")}</p>
+        {exportMsg && <p className="mt-2 text-sm text-brand-700">{exportMsg}</p>}
       </Card>
 
       <ConfirmDialog

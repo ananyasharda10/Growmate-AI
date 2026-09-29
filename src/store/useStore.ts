@@ -384,18 +384,28 @@ export const useStore = create<StoreState>()(
     },
 
     deleteProduct: (productId) => {
+      // The "created" movement is logged for every product unconditionally (so its history
+      // always shows when it was added), so it must not count as "real" usage history here —
+      // otherwise every product, even one deleted seconds after creation with no sales or
+      // stock activity, would always be archived instead of actually deleted.
       const hasHistory =
         get().sales.some((sale) => sale.productId === productId) ||
-        get().movements.some((m) => m.productId === productId);
+        get().movements.some((m) => m.productId === productId && m.type !== "created");
       if (hasHistory) {
         get().archiveProduct(productId);
         return { ok: true, archived: true };
       }
-      const prev = { products: get().products };
-      set((s) => ({ products: s.products.filter((p) => p.id !== productId) }));
+      const prev = { products: get().products, movements: get().movements };
+      set((s) => ({
+        products: s.products.filter((p) => p.id !== productId),
+        movements: s.movements.filter((m) => m.productId !== productId),
+      }));
       if (!get().isDemo) {
         fireSync(
-          [supabase.from("products").delete().eq("id", productId).eq("user_id", userId())],
+          [
+            supabase.from("products").delete().eq("id", productId).eq("user_id", userId()),
+            supabase.from("stock_movements").delete().eq("product_id", productId).eq("user_id", userId()),
+          ],
           prev
         );
       }

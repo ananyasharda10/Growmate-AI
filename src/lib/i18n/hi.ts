@@ -384,6 +384,9 @@ const hi: Translations = {
     resetBtn: "रीसेट करें",
     languageLabel: "भाषा",
     invalidNegativeValue: "ये वैल्यू नेगेटिव नहीं हो सकतीं।",
+    nameRequired: "बिज़नेस का नाम ज़रूरी है।",
+    lowStockMustBePositive: "डिफ़ॉल्ट लो-स्टॉक लेवल शून्य से अधिक होना चाहिए।",
+    exportDoneMsg: "उत्पाद, बिक्री, खर्च और बकाया CSV फ़ाइलों के रूप में एक्सपोर्ट हो गए।",
     archivedProductsTitle: "आर्काइव किए गए उत्पाद",
     archivedProductsSubtitle: "ऐसे उत्पाद जिन्हें डिलीट करने के बजाय आर्काइव किया गया, क्योंकि उनकी बिक्री या स्टॉक हिस्ट्री है।",
     noArchivedProducts: "कोई आर्काइव किया गया उत्पाद नहीं है।",
@@ -391,7 +394,7 @@ const hi: Translations = {
     deleteForeverBtn: "हमेशा के लिए डिलीट करें",
     deleteForeverTitle: "इस उत्पाद को हमेशा के लिए डिलीट करें?",
     deleteForeverMsg: '"{{name}}" और इसकी स्टॉक हिस्ट्री हमेशा के लिए हट जाएगी। इसे पूर्ववत नहीं किया जा सकता।',
-    currencyLockedNote: "डेटा दर्ज होने के बाद करेंसी नहीं बदली जा सकती, क्योंकि राशि कन्वर्ट नहीं होती — सिर्फ चिन्ह बदल जाता।",
+    currencyLockedNote: "डेटा दर्ज होने के बाद करेंसी नहीं बदली जा सकती, क्योंकि राशि कन्वर्ट नहीं होती — सिर्फ चिह्न बदल जाता।",
   },
 
   onboarding: {
