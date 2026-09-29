@@ -305,11 +305,15 @@ export function Dashboard() {
                 <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                 <Tooltip formatter={(v) => [formatMoney(Number(v), currency), t("dashboard.chartSalesLabel")]} />
-                <Bar dataKey="total" name={t("dashboard.chartSalesLabel")} fill="#2f8f52" radius={[6, 6, 0, 0]}>
+                {/* minPointSize keeps a zero-value day's bar (and its label) actually
+                    rendered — recharts' default renders a literal zero height for a 0
+                    value, which drops both the bar and its label entirely, making it look
+                    like that day (often "today", before any sales come in) was omitted. */}
+                <Bar dataKey="total" name={t("dashboard.chartSalesLabel")} fill="#2f8f52" radius={[6, 6, 0, 0]} minPointSize={2}>
                   <LabelList
                     dataKey="total"
                     position="top"
-                    formatter={(v) => (typeof v === "number" && v > 0 ? formatMoney(v, currency) : "")}
+                    formatter={(v) => (typeof v === "number" ? formatMoney(v, currency) : "")}
                     style={{ fontSize: 11, fill: "#374151" }}
                   />
                 </Bar>
