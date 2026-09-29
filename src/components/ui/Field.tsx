@@ -62,8 +62,15 @@ export function NumberInput({
         onBlur?.(e);
       }}
       onChange={(e) => {
-        const raw = e.target.value;
+        let raw = e.target.value;
         if (raw !== "" && raw !== "-" && !NUMERIC_DRAFT_PATTERN.test(raw)) return;
+        // A click can focus the field and place the cursor in the same tick, racing the
+        // select-on-focus above — when that race is lost, a leading "0" doesn't get
+        // selected, and the next digit lands after it instead of replacing it ("0" + "4"
+        // -> "04" instead of "4"). Stripping a leading zero whenever a digit follows it
+        // fixes this regardless of whether the selection actually happened, while leaving
+        // an in-progress decimal like "0.5" alone (only a digit after the zero triggers it).
+        raw = raw.replace(/^0+(?=\d)/, "");
         setText(raw);
         if (raw === "" || raw === "-") return;
         const parsed = Number(raw);
