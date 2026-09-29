@@ -145,6 +145,30 @@ function describeSupabaseError(error: unknown): string {
   return String(error);
 }
 
+const MISSING_COLUMN_PATTERN = /Could not find the '([a-zA-Z_]+)' column of '[a-zA-Z_]+' in the schema cache/;
+
+// The live Supabase project's schema can lag behind what this app's code expects (e.g. a
+// column added in a later app update that a given project's database never had a migration
+// run for) — surfacing as PGRST204 "could not find column X in the schema cache". Rather than
+// hard-failing the whole write over one field, retry once with that field stripped out, so
+// the rest of the row (the part that actually matters for most operations) still saves.
+async function writeWithColumnFallback(
+  row: Record<string, unknown>,
+  write: (row: Record<string, unknown>) => PromiseLike<{ error: unknown }>
+): Promise<{ error: unknown }> {
+  const result = await write(row);
+  if (result.error) {
+    const message = (result.error as { message?: string } | null)?.message ?? "";
+    const match = message.match(MISSING_COLUMN_PATTERN);
+    if (match && match[1] in row) {
+      const retryRow = { ...row };
+      delete retryRow[match[1]];
+      return write(retryRow);
+    }
+  }
+  return result;
+}
+
 function errorCode(error: unknown): string | undefined {
   return error && typeof error === "object" ? (error as { code?: string }).code : undefined;
 }
@@ -374,7 +398,9 @@ export const useStore = create<StoreState>()(
       const writes: PromiseLike<{ error: unknown }>[] = [
         supabase.from("business_settings").upsert({ user_id: uid, data: settings, updated_at: nowISO() }),
         ...products.map((p) => supabase.from("products").update(productToRow(uid, p)).eq("id", p.id).eq("user_id", uid)),
-        ...sales.map((sa) => supabase.from("sales").update(saleToRow(uid, sa)).eq("id", sa.id).eq("user_id", uid)),
+        ...sales.map((sa) =>
+          writeWithColumnFallback(saleToRow(uid, sa), (row) => supabase.from("sales").update(row).eq("id", sa.id).eq("user_id", uid))
+        ),
         ...expenses.map((e) => supabase.from("expenses").update(expenseToRow(uid, e)).eq("id", e.id).eq("user_id", uid)),
         ...dues.map((d) => supabase.from("dues").update(dueToRow(uid, d)).eq("id", d.id).eq("user_id", uid)),
       ];
@@ -590,7 +616,9 @@ export const useStore = create<StoreState>()(
       });
 
       if (!get().isDemo) {
-        const writes: PromiseLike<{ error: unknown }>[] = [supabase.from("sales").insert(saleToRow(userId(), sale))];
+        const writes: PromiseLike<{ error: unknown }>[] = [
+          writeWithColumnFallback(saleToRow(userId(), sale), (row) => supabase.from("sales").insert(row)),
+        ];
         if (movement) {
           const updatedStock = get().products.find((p) => p.id === input.productId)?.stock;
           if (updatedStock !== undefined) {
