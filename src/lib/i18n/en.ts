@@ -473,6 +473,7 @@ const en = {
     businessType: {
       food_stall: "Food stall",
       retail_shop: "Retail shop",
+      kirana_store: "Kirana store",
       home_business: "Home business",
       reseller: "Reseller",
       other: "Other",

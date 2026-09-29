@@ -475,6 +475,7 @@ const hi: Translations = {
     businessType: {
       food_stall: "फूड स्टॉल",
       retail_shop: "रिटेल शॉप",
+      kirana_store: "किराना स्टोर",
       home_business: "होम बिज़नेस",
       reseller: "रीसेलर",
       other: "अन्य",

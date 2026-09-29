@@ -103,8 +103,8 @@ export interface Due {
   autoCreated?: boolean;
 }
 
-export type BusinessType = "food_stall" | "retail_shop" | "home_business" | "reseller" | "other";
-export const BUSINESS_TYPE_VALUES: BusinessType[] = ["food_stall", "retail_shop", "home_business", "reseller", "other"];
+export type BusinessType = "food_stall" | "retail_shop" | "kirana_store" | "home_business" | "reseller" | "other";
+export const BUSINESS_TYPE_VALUES: BusinessType[] = ["food_stall", "retail_shop", "kirana_store", "home_business", "reseller", "other"];
 export type Currency = "USD" | "INR";
 
 export interface BusinessSettings {
