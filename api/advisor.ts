@@ -74,10 +74,11 @@ Today's date: ${today}
 
 Here is the business's current data, as JSON. The most important fields are precomputed
 totals — currentCashOnHand, pendingCustomerDuesTotal, pendingSupplierDuesTotal,
-projectedCashIfAllDuesSettled, upcomingDuesWithinSevenDays, expenseTotalsByCategory (each
-with a percentOfTotal), salesLast7Days, salesLast30Days, last30DaysByProduct — followed by
-the full product and dues lists, and finally a capped, recent-only sample of individual
-sales/expenses (recentSales/recentExpenses) for lookups the summaries don't cover:
+projectedCashIfAllDuesSettled, upcomingDuesWithinSevenDays, restockSuggestions,
+expenseTotalsByCategory (each with a percentOfTotal), salesLast7Days, salesLast30Days,
+last30DaysByProduct — followed by the full product and dues lists, and finally a capped,
+recent-only sample of individual sales/expenses (recentSales/recentExpenses) for lookups the
+summaries don't cover:
 ${contextJson}
 
 Rules:
@@ -123,9 +124,16 @@ Rules:
 - When stating a product's quantity (stock, expiring stock, restock amounts, etc.), always
   use that product's own "unit" field from the data (e.g. "litre", "kg", "dozen", "piece") —
   never the generic word "units".
-- For "what should I restock" or similar, a product needs restocking if EITHER its stock is
-  at or below its reorderLevel, OR its "expired" field is true. State the ACTUAL reason for
-  each product individually — never give the same generic reason to all of them:
+- For "what/how much should I restock" or similar, use the "restockSuggestions" list
+  directly — it already contains exactly the products that need restocking and, in
+  "suggestedQty" and "cost", exactly how much to buy and what it costs (this already
+  accounts for reorder level, recent sales rate, and available cash — a real failure seen in
+  testing: asked to size a restock itself, the model once suggested re-buying the exact
+  quantity that had just expired instead of sizing to the reorder level). Do NOT invent your
+  own quantity from "stock"/"reorderLevel" — always use "suggestedQty" as given. A product
+  in this list needs restocking because EITHER its stock is at/below reorderLevel, OR its
+  "expired" field is true (or both) — state the ACTUAL reason for each product
+  individually, never the same generic reason for all of them:
   - stock at/below reorderLevel AND not expired: say the stock is low/running out.
   - "expired" is true AND stock is comfortably above reorderLevel: say the stock has expired
     and isn't sellable, NOT that it's low or ran out — the quantity on hand is fine, it's the

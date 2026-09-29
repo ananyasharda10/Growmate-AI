@@ -1,6 +1,6 @@
 import type { Currency, Due, Expense, Product, Sale } from "../types";
-import { cashOnHand, dueAmountRemaining, isExpired } from "./calculations";
-import { localDateOf, todayISO, daysBetween } from "./id";
+import { buildRestockSuggestions, cashOnHand, dueAmountRemaining, isExpired } from "./calculations";
+import { addDays, localDateOf, todayISO, daysBetween } from "./id";
 
 export interface AskContext {
   products: Product[];
@@ -121,6 +121,25 @@ export function buildAdvisorContext(ctx: AskContext): string {
   const currentCashOnHand = cashOnHand(ctx.openingCashBalance, ctx.sales, ctx.expenses, ctx.dues);
   const projectedCashIfAllDuesSettled = currentCashOnHand + pendingCustomerDuesTotal - pendingSupplierDuesTotal;
 
+  // Same restock math the Dashboard and Advisor's own "Restock priority" card use — handed
+  // over pre-computed so "what/how much should I restock" answers use the app's real
+  // quantity logic (reorder-level and sales-rate based, cash-constrained) instead of the
+  // model inventing its own number (a real failure seen in testing: it once suggested
+  // re-buying the exact quantity that had just expired, rather than sizing to reorderLevel).
+  const upcomingSupplierDueTotal = ctx.dues
+    .filter((d) => d.type === "supplier" && d.status !== "settled" && (!d.dueDate || d.dueDate <= addDays(today, 7)))
+    .reduce((s, d) => s + dueAmountRemaining(d), 0);
+  const restockSuggestions = buildRestockSuggestions(ctx.products, ctx.sales, currentCashOnHand, upcomingSupplierDueTotal).map((r) => ({
+    name: r.product.name,
+    unit: r.product.unit,
+    currentStock: r.currentStock,
+    reorderLevel: r.product.reorderLevel,
+    expired: isExpired(r.product, today),
+    suggestedQty: r.affordableQty,
+    cost: r.cost,
+    cashConstrained: r.constrained,
+  }));
+
   // Dues due within the next 7 days — precomputed so "what's due soon" questions don't
   // depend on the model correctly reasoning about today's date versus each due's date.
   const upcomingDues = ctx.dues
@@ -199,6 +218,7 @@ export function buildAdvisorContext(ctx: AskContext): string {
     pendingSupplierDuesTotal,
     projectedCashIfAllDuesSettled,
     upcomingDuesWithinSevenDays: upcomingDues,
+    restockSuggestions,
     expenseTotalsByCategory,
     salesLast7Days,
     salesLast30Days,
