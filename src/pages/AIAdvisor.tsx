@@ -37,6 +37,11 @@ export function AIAdvisor() {
   const resolveAdvisorTurn = useStore((s) => s.resolveAdvisorTurn);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  // Local/ephemeral only — never written into the persisted conversation, so it can't affect
+  // the "once a turn's answer is set, it's never touched again" invariant below. Drives a
+  // live ticking countdown in place of the loading dots while waiting out a rate limit,
+  // instead of a static "wait about Xs" message that never visibly changes.
+  const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
   // `busy` state alone isn't enough: several rapid clicks/Enter presses can all fire before
   // React re-renders with the disabled button, each still reading the stale `busy = false`
   // from its own closure. A ref is set synchronously, so the very next call sees the lock
@@ -64,7 +69,14 @@ export function AIAdvisor() {
         signal: controller.signal,
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.answer) throw new Error(data?.error || "");
+      if (!res.ok || !data.answer) {
+        if (res.status === 429 && typeof data.retryAfterSeconds === "number" && data.retryAfterSeconds > 0) {
+          await runRetryCountdown(data.retryAfterSeconds);
+          resolveAdvisorTurn({ answer: t("advisor.retryNowReply"), error: true });
+          return;
+        }
+        throw new Error(data?.error || "");
+      }
       resolveAdvisorTurn({ answer: data.answer });
     } catch (err) {
       // Surface the server's own message when it gave one (e.g. a specific rate-limit
@@ -77,6 +89,23 @@ export function AIAdvisor() {
       busyRef.current = false;
       setBusy(false);
     }
+  }
+
+  function runRetryCountdown(seconds: number): Promise<void> {
+    return new Promise((resolve) => {
+      let remaining = Math.ceil(seconds);
+      setRetryCountdown(remaining);
+      const interval = setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          clearInterval(interval);
+          setRetryCountdown(null);
+          resolve();
+          return;
+        }
+        setRetryCountdown(remaining);
+      }, 1000);
+    });
   }
 
   const cash = cashOnHand(settings.openingCashBalance, sales, expenses, dues);
@@ -160,11 +189,17 @@ export function AIAdvisor() {
             <div key={i} className="space-y-2">
               <p className="w-fit max-w-[85%] rounded-2xl rounded-br-sm bg-brand-600 px-4 py-2 text-sm text-white ml-auto">{turn.question}</p>
               {turn.answer === null ? (
-                <p className="flex w-fit items-center gap-1.5 rounded-2xl rounded-bl-sm bg-gray-100 px-4 py-2.5 text-sm text-gray-400">
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.3s]" />
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.15s]" />
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400" />
-                </p>
+                retryCountdown !== null ? (
+                  <p className="w-fit rounded-2xl rounded-bl-sm bg-gray-100 px-4 py-2.5 text-sm text-gray-500">
+                    {t("advisor.retryCountdown", { seconds: retryCountdown })}
+                  </p>
+                ) : (
+                  <p className="flex w-fit items-center gap-1.5 rounded-2xl rounded-bl-sm bg-gray-100 px-4 py-2.5 text-sm text-gray-400">
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.3s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.15s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400" />
+                  </p>
+                )
               ) : (
                 <p
                   className={`w-fit max-w-[85%] whitespace-pre-line rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm ${

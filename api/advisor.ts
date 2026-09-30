@@ -76,9 +76,9 @@ Here is the business's current data, as JSON. The most important fields are prec
 totals — currentCashOnHand, pendingCustomerDuesTotal, pendingSupplierDuesTotal,
 projectedCashIfAllDuesSettled, upcomingDuesWithinSevenDays, restockSuggestions,
 expenseTotalsByCategory (each with a percentOfTotal), salesLast7Days, salesLast30Days,
-todayByProduct, last30DaysByProduct — followed by the full product and dues lists, and
-finally a capped, recent-only sample of individual sales/expenses (recentSales/recentExpenses)
-for lookups the summaries don't cover:
+todayByProduct, last30DaysByProduct, totalProfitAllTime, biggestSaleEver — followed by the
+full product and dues lists, and finally a capped, recent-only sample of individual
+sales/expenses (recentSales/recentExpenses) for lookups the summaries don't cover:
 ${contextJson}
 
 Rules:
@@ -119,6 +119,12 @@ Rules:
   longer an active product (e.g. "archived, no longer in your inventory") rather than
   discussing it as if it were still active — its past sales are still real history, but
   presenting it like a current product to pay attention to would be misleading.
+- For "total profit" / "profit overall" / "all-time profit" (no specific time window named),
+  use "totalProfitAllTime" directly — do not substitute the 30-day figure and call it the
+  total, and do not say this data is unavailable, since it is always included.
+- For "biggest/largest sale ever" or similar all-time superlatives, use "biggestSaleEver"
+  directly (it already gives the product, quantity, unit price, total, and date) — do not
+  scan "recentSales" for this, since that list is capped and may not include it.
 - If asked to calculate something not covered by a precomputed field (e.g. "what would I
   make if I sold 10 Rotis"), find the relevant per-item figures (e.g. one product's cost
   and sell price) and do that specific arithmetic yourself, showing the actual numbers —
@@ -186,6 +192,13 @@ Rules:
   (no stray English words for concepts that have a natural Hindi term — translate them,
   don't leave them in English). Product/customer/supplier names, and numbers/currency
   amounts, are not translated either way and don't count as mixing.
+- Format every amount using the "currency" field's own symbol (₹ for INR, $ for USD) directly
+  in front of the number, exactly like the app itself (e.g. "₹3,975.00", "$29,075.00") —
+  never write the currency as a word or code instead of the symbol (not "3,975 INR", not
+  "29,075 dollars"), and never use a different currency's symbol than the one given.
+- Format any date you state the same way the app displays it: DD/MM/YYYY in Hindi, MM/DD/YYYY
+  in English (e.g. "30/09/2026" in Hindi, "09/30/2026" in English) — never the raw
+  "YYYY-MM-DD" form the data uses internally.
 
 ${FEATURE_GLOSSARY}`;
 }
@@ -268,6 +281,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           error: waitSeconds
             ? `The advisor is getting a lot of questions right now — please wait about ${waitSeconds} seconds and try again.`
             : "The advisor is getting a lot of questions right now — please wait a moment and try again.",
+          // Structured, separate from the message above, so the client can drive a live
+          // countdown instead of just showing a static "wait about Xs" line that never
+          // updates — a real complaint from testing (the retry felt like a dead end).
+          retryAfterSeconds: waitSeconds,
         });
         return;
       }

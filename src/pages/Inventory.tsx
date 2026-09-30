@@ -108,6 +108,7 @@ export function Inventory() {
   const [pendingUnitChange, setPendingUnitChange] = useState<{ payload: ProductFormPayload; from: Unit; to: Unit } | null>(null);
   const [unitChangeResultMsg, setUnitChangeResultMsg] = useState<string | null>(null);
   const [pendingZeroStock, setPendingZeroStock] = useState<ProductFormPayload | null>(null);
+  const [pendingBelowCost, setPendingBelowCost] = useState<ProductFormPayload | null>(null);
 
   const [historyTarget, setHistoryTarget] = useState<Product | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
@@ -185,6 +186,17 @@ export function Inventory() {
     }
     setFormError("");
 
+    // A sell price below cost means every sale loses money — usually a typo, but not always
+    // (e.g. a deliberate loss-leader or clearance item), so this asks for confirmation rather
+    // than blocking outright. Applies to edits too, not just new products.
+    if (payload.sell < payload.cost) {
+      setPendingBelowCost(payload);
+      return;
+    }
+    continueAfterBelowCostCheck(payload);
+  }
+
+  function continueAfterBelowCostCheck(payload: ProductFormPayload) {
     // A brand-new product with 0 stock is easy to create by mistake (forgot to enter the
     // quantity received) — worth an explicit confirmation, the same way a 0 sell price is
     // rejected outright. Not applied to edits: a stock going down to 0 on an existing
@@ -604,6 +616,19 @@ export function Inventory() {
           setPendingProductPayload(null);
           setPendingProductResultMsg(null);
         }}
+      />
+
+      <ConfirmDialog
+        open={!!pendingBelowCost}
+        title={t("inventory.belowCostTitle")}
+        message={t("inventory.belowCostMsg")}
+        confirmLabel={t("inventory.belowCostConfirmBtn")}
+        onConfirm={() => {
+          const payload = pendingBelowCost;
+          setPendingBelowCost(null);
+          if (payload) continueAfterBelowCostCheck(payload);
+        }}
+        onCancel={() => setPendingBelowCost(null)}
       />
 
       <ConfirmDialog

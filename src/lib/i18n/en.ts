@@ -200,6 +200,9 @@ const en = {
     zeroStockTitle: "Add with zero stock?",
     zeroStockMsg: "This product's stock is set to 0. If you haven't received any yet, that's fine — you can add stock later. Add it anyway?",
     zeroStockConfirmBtn: "Add anyway",
+    belowCostTitle: "Sell price below cost?",
+    belowCostMsg: "This product's sell price is lower than its cost price — every sale of it will lose money. Save it anyway?",
+    belowCostConfirmBtn: "Save anyway",
   },
 
   money: {
@@ -345,6 +348,8 @@ const en = {
     inputPlaceholder: "Ask GrowMate anything about your business...",
     askBtn: "Ask",
     errorReply: "Sorry, I couldn't process that right now. Please try again.",
+    retryCountdown: "The advisor is busy right now — you can try again in {{seconds}}s...",
+    retryNowReply: "You can try asking again now.",
     questions: {
       restockToday: "What should I restock today?",
       howMuchBuy: "How much inventory should I buy?",
@@ -406,6 +411,7 @@ const en = {
     deleteForeverMsg: '"{{name}}" and its stock history will be permanently removed. This cannot be undone.',
     convertCurrencyTitle: "Convert your amounts?",
     convertCurrencyMsg: "Switching from {{from}} to {{to}} will convert every recorded amount (products, sales, expenses, dues, opening cash) using the exchange rate below — not just relabel them.",
+    convertRoundingNote: "Amounts are rounded to 2 decimal places, so converting back and forth repeatedly can shift totals slightly each time — avoid switching back and forth unnecessarily.",
     exchangeRateLabel: "Exchange rate (1 USD = ₹___)",
     convertBtn: "Convert",
     convertedTitle: "Converted",

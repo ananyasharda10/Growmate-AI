@@ -314,6 +314,7 @@ export function Settings() {
                 to: pendingCurrency === "INR" ? "₹" : "$",
               })}
             </p>
+            <p className="text-xs text-gray-400">{t("settings.convertRoundingNote")}</p>
             <div>
               <Label>{t("settings.exchangeRateLabel")}</Label>
               <NumberInput value={exchangeRate} onChange={setExchangeRate} />

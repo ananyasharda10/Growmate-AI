@@ -1,5 +1,5 @@
 import type { Currency, Due, Expense, Product, Sale } from "../types";
-import { buildRestockSuggestions, cashOnHand, dueAmountRemaining, isExpired } from "./calculations";
+import { buildRestockSuggestions, cashOnHand, dueAmountRemaining, isExpired, marginAmount } from "./calculations";
 import { addDays, localDateOf, todayISO, daysBetween } from "./id";
 
 export interface AskContext {
@@ -194,6 +194,24 @@ export function buildAdvisorContext(ctx: AskContext): string {
   const todayByProduct = perProductStats(1);
   const last30DaysByProduct = perProductStats(30);
 
+  // All-time totals the model has no other way to derive: it only ever sees a recent, capped
+  // sample of sales (recentSales) plus 7/30-day rollups, so an all-time question ("total
+  // profit ever", "biggest sale I've ever made") would otherwise be answered from that
+  // partial sample and either invented or wrongly denied. Mirrors the Dashboard's own
+  // profitTracked calculation exactly, so the two never disagree.
+  const totalProfitAllTime = ctx.sales.reduce((sum, s) => {
+    if (!s.productId) return sum;
+    const product = ctx.products.find((p) => p.id === s.productId);
+    const costAtSale = s.unitCost ?? product?.cost;
+    if (costAtSale === undefined) return sum;
+    return sum + marginAmount(costAtSale, s.unitPrice) * s.quantity;
+  }, 0);
+
+  const biggestSaleEver = ctx.sales.reduce<{ product: string; quantity: number; unitPrice: number; total: number; date: string } | null>(
+    (best, s) => (!best || s.total > best.total ? { product: s.productName, quantity: s.quantity, unitPrice: s.unitPrice, total: s.total, date: localDateOf(s.date) } : best),
+    null
+  );
+
   const recentSales = ctx.sales.slice(0, MAX_RAW_SALES).map((s) => ({
     product: s.productName,
     quantity: s.quantity,
@@ -236,6 +254,8 @@ export function buildAdvisorContext(ctx: AskContext): string {
     salesLast30Days,
     todayByProduct,
     last30DaysByProduct,
+    totalProfitAllTime,
+    biggestSaleEver,
     knownCustomerNames,
     knownSupplierNames,
     knownProductNames,
