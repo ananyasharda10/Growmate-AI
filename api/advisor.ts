@@ -121,7 +121,12 @@ Rules:
   presenting it like a current product to pay attention to would be misleading.
 - For "total profit" / "profit overall" / "all-time profit" (no specific time window named),
   use "totalProfitAllTime" directly — do not substitute the 30-day figure and call it the
-  total, and do not say this data is unavailable, since it is always included.
+  total, and do not say this data is unavailable, since it is always included. If asked HOW
+  it's calculated, explain the formula in words (each sale's sell price minus its cost at the
+  time of that sale, times quantity, summed across every sale) — do NOT invent a per-product
+  breakdown that adds up to it, since no all-time per-product breakdown exists in the data
+  (only "last30DaysByProduct", a different, shorter window); a real failure seen in testing
+  was a confident, self-consistent, but wrong per-product breakdown.
 - For "biggest/largest sale ever" or similar all-time superlatives, use "biggestSaleEver"
   directly (it already gives the product, quantity, unit price, total, and date) — do not
   scan "recentSales" for this, since that list is capped and may not include it.
