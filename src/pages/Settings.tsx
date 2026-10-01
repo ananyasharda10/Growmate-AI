@@ -329,6 +329,14 @@ export function Settings() {
                 onClick={() => {
                   convertCurrency(pendingCurrency, exchangeRate);
                   setCurrency(pendingCurrency);
+                  // This form's fields are local drafts, only ever initialized once from
+                  // `settings` on mount — convertCurrency updates the store's
+                  // openingCashBalance correctly, but without this, the local `opening` draft
+                  // would keep showing the pre-conversion number, and saving the form
+                  // afterward (even untouched) would silently overwrite the real converted
+                  // value with that stale one. convertCurrency runs synchronously, so the
+                  // store already reflects the new value by this point.
+                  setOpening(useStore.getState().settings.openingCashBalance);
                   setConvertedMsg(
                     t("settings.convertedMsg", {
                       currency: pendingCurrency === "INR" ? "₹" : "$",
