@@ -76,9 +76,10 @@ Here is the business's current data, as JSON. The most important fields are prec
 totals — currentCashOnHand, pendingCustomerDuesTotal, pendingSupplierDuesTotal,
 projectedCashIfAllDuesSettled, upcomingDuesWithinSevenDays, restockSuggestions,
 expenseTotalsByCategory (each with a percentOfTotal), salesLast7Days, salesLast30Days,
-todayByProduct, last30DaysByProduct, totalProfitAllTime, biggestSaleEver — followed by the
-full product and dues lists, and finally a capped, recent-only sample of individual
-sales/expenses (recentSales/recentExpenses) for lookups the summaries don't cover:
+todayByProduct, last30DaysByProduct, totalProfitAllTime, biggestSaleEver,
+biggestSaleLast30Days — followed by the full product and dues lists, and finally a capped,
+recent-only sample of individual sales/expenses (recentSales/recentExpenses) for lookups the
+summaries don't cover:
 ${contextJson}
 
 Rules:
@@ -134,6 +135,10 @@ Rules:
 - For "biggest/largest sale ever" or similar all-time superlatives, use "biggestSaleEver"
   directly (it already gives the product, quantity, unit price, total, and date) — do not
   scan "recentSales" for this, since that list is capped and may not include it.
+- For "biggest/largest sale in the last 30 days" (a bounded window, not "ever"), use
+  "biggestSaleLast30Days" instead — it is null if there were no sales in that window, which
+  means say there were no sales, never that the data is unavailable (it is always included;
+  a real failure seen in testing was denying this was available in Hindi when it was).
 - If asked to calculate something not covered by a precomputed field (e.g. "what would I
   make if I sold 10 Rotis"), find the relevant per-item figures (e.g. one product's cost
   and sell price) and do that specific arithmetic yourself, showing the actual numbers —

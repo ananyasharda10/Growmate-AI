@@ -218,10 +218,18 @@ export function buildAdvisorContext(ctx: AskContext): string {
     return sum + marginAmount(costAtSale, s.unitPrice) * s.quantity;
   }, 0);
 
-  const biggestSaleEver = ctx.sales.reduce<{ product: string; quantity: number; unitPrice: number; total: number; date: string } | null>(
-    (best, s) => (!best || s.total > best.total ? { product: s.productName, quantity: s.quantity, unitPrice: s.unitPrice, total: s.total, date: localDateOf(s.date) } : best),
-    null
-  );
+  function biggestSale(sales: Sale[]) {
+    return sales.reduce<{ product: string; quantity: number; unitPrice: number; total: number; date: string } | null>(
+      (best, s) => (!best || s.total > best.total ? { product: s.productName, quantity: s.quantity, unitPrice: s.unitPrice, total: s.total, date: localDateOf(s.date) } : best),
+      null
+    );
+  }
+  const biggestSaleEver = biggestSale(ctx.sales);
+  // A real failure seen in testing: asked (in Hindi) for the biggest single sale in the last
+  // 30 days specifically, the model denied having the data — "biggestSaleEver" alone doesn't
+  // cover a bounded-window version of this question, and the raw "recentSales" list is capped
+  // and not reliably scoped to exactly 30 days, so this needs its own precomputed field too.
+  const biggestSaleLast30Days = biggestSale(ctx.sales.filter((s) => withinLastDays(localDateOf(s.date), 30, today)));
 
   const recentSales = ctx.sales.slice(0, MAX_RAW_SALES).map((s) => ({
     product: s.productName,
@@ -267,6 +275,7 @@ export function buildAdvisorContext(ctx: AskContext): string {
     last30DaysByProduct,
     totalProfitAllTime,
     biggestSaleEver,
+    biggestSaleLast30Days,
     knownCustomerNames,
     knownSupplierNames,
     knownProductNames,
