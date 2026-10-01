@@ -29,6 +29,7 @@ export default function App() {
   const setSessionFromSupabase = useStore((s) => s.setSessionFromSupabase);
   const hydrate = useStore((s) => s.hydrate);
   const clearAllData = useStore((s) => s.clearAllData);
+  const loadDemoData = useStore((s) => s.loadDemoData);
   const [checkingSession, setCheckingSession] = useState(true);
   // The persisted `language` (and advisor conversation) load from localStorage
   // asynchronously via zustand's persist middleware — without this gate, the very first
@@ -44,6 +45,16 @@ export default function App() {
     }
     return useStore.persist.onFinishHydration(() => setLanguageReady(true));
   }, [languageReady]);
+
+  // A full page reload (not an in-app navigation) always starts from an empty in-memory
+  // store — including demo mode, which never had a real Supabase session to restore. Only
+  // the `isDemo` flag itself survives (persisted). Regenerating the same deterministic demo
+  // dataset here means a direct load/refresh of an inner page keeps a demo session going
+  // instead of silently dropping back to /auth.
+  useEffect(() => {
+    if (!languageReady || session) return;
+    if (useStore.getState().isDemo) loadDemoData();
+  }, [languageReady, session, loadDemoData]);
 
   useEffect(() => {
     supabase.auth

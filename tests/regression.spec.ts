@@ -18,10 +18,11 @@ async function startDemo(page: Page) {
   await page.getByRole("button", { name: "Skip tour" }).click();
 }
 
-// Demo mode's session lives only in memory (Zustand), not localStorage — a real page.goto()
-// or reload() is a full browser navigation that wipes it, exactly like closing the tab would.
-// Moving between pages while keeping the demo session alive means clicking the in-app nav,
-// the same way a real user would, rather than page.goto().
+// Demo mode's own data (products, sales, etc.) lives only in memory, not localStorage — a
+// real page.goto() or reload() wipes it, regenerated afterward from the persisted `isDemo`
+// flag (see test 6). That regeneration is a real network-free re-render, not instant, so
+// prefer the in-app nav for tests that aren't specifically about reload behavior, to avoid
+// relying on timing.
 async function goToNav(page: Page, label: string) {
   await page.getByRole("link", { name: label }).click();
 }
@@ -106,4 +107,19 @@ test("5. advisor chat history survives navigating away and back", async ({ page 
   await goToNav(page, "Dashboard");
   await goToNav(page, "AI Advisor");
   await expect(page.getByText(question)).toBeVisible();
+});
+
+test("6. a demo session survives a direct load / full refresh of an inner page", async ({ page }) => {
+  await startDemo(page);
+
+  // A real full reload, not an SPA route change — this used to bounce back to /auth since
+  // only `language` was ever persisted, not the demo session itself.
+  await page.reload();
+  await expect(page).not.toHaveURL(/\/auth/);
+
+  // Typing the URL directly (e.g. a bookmark, or sharing a link) should work the same way,
+  // not just a reload of a page already reached through the app.
+  await page.goto("/money");
+  await expect(page).toHaveURL(/\/money/);
+  await expect(page.getByText(/Money In|Record Expense|Quick Cash/i).first()).toBeVisible();
 });

@@ -874,7 +874,11 @@ export const useStore = create<StoreState>()(
     },
     {
       name: "growmate-language",
-      partialize: (s) => ({ language: s.language, advisorConversation: s.advisorConversation }),
+      // isDemo is persisted (unlike the rest of demo state) purely so a full page reload can
+      // tell "was in a demo session" apart from "never signed in" and regenerate the same
+      // demo dataset (see App.tsx) instead of bouncing the user to /auth — demo data is
+      // deterministic (a fixed seed), so regenerating it reproduces exactly what was there.
+      partialize: (s) => ({ language: s.language, advisorConversation: s.advisorConversation, isDemo: s.isDemo }),
     }
   )
 );
