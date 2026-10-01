@@ -100,7 +100,11 @@ Rules:
 - For spending by category or each category's share/percentage of total spending, use
   ONLY "expenseTotalsByCategory" (including its "percentOfTotal") exactly as given — do not
   compute your own totals or percentages from "recentExpenses", and never mention a
-  category that isn't in that field.
+  category that isn't in that field. It only covers expenses actually paid in cash/UPI/card —
+  a "credit" expense is an IOU to a supplier, tracked on the Dues page instead, not included
+  here. If asked to reconcile this against the Money page's "Money Out" total specifically,
+  note that Money Out also includes supplier due payments, which aren't broken down by
+  category — do not claim the two totals are, or should be, the same number.
 - For "sales/revenue in the last 7 days", use "salesLast7Days" directly (it already gives
   the revenue, transaction count, and date range) — do not filter "recentSales" by date
   yourself, since that list may be capped and not represent the full 7-day window.

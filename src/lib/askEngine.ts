@@ -1,5 +1,5 @@
 import type { Currency, Due, Expense, Product, Sale } from "../types";
-import { buildRestockSuggestions, cashOnHand, dueAmountRemaining, isExpired, marginAmount } from "./calculations";
+import { buildRestockSuggestions, cashOnHand, cashPaidForExpenses, dueAmountRemaining, isExpired, marginAmount } from "./calculations";
 import { addDays, localDateOf, todayISO, daysBetween } from "./id";
 
 export interface AskContext {
@@ -101,11 +101,22 @@ export function buildAdvisorContext(ctx: AskContext): string {
   // context: it is placed first in the returned JSON, before the bulkier raw arrays below,
   // so that if the payload ever needs to be shortened, it's the raw history that gets cut,
   // never these numbers.
+  // Excludes "credit" expenses (an IOU to a supplier, not cash actually paid yet) so this
+  // total always matches cashPaidForExpenses — the same figure the Money page's "Money Out"
+  // is built from. Including credit expenses here produced a category-breakdown total that
+  // didn't match anything shown on screen, a real failure seen in testing.
   const categoryTotals = new Map<string, number>();
-  for (const e of ctx.expenses) categoryTotals.set(e.category, (categoryTotals.get(e.category) ?? 0) + e.amount);
-  const totalExpenses = ctx.expenses.reduce((s, e) => s + e.amount, 0);
+  for (const e of ctx.expenses) {
+    if (e.paymentMethod === "credit") continue;
+    categoryTotals.set(e.category, (categoryTotals.get(e.category) ?? 0) + e.amount);
+  }
+  const totalCashPaidExpenses = cashPaidForExpenses(ctx.expenses);
   const expenseTotalsByCategory = [...categoryTotals.entries()]
-    .map(([category, total]) => ({ category, total, percentOfTotal: totalExpenses > 0 ? Math.round((total / totalExpenses) * 1000) / 10 : 0 }))
+    .map(([category, total]) => ({
+      category,
+      total,
+      percentOfTotal: totalCashPaidExpenses > 0 ? Math.round((total / totalCashPaidExpenses) * 1000) / 10 : 0,
+    }))
     .sort((a, b) => b.total - a.total);
 
   const knownCustomerNames = ctx.dues.filter((d) => d.type === "customer").map((d) => d.name);
