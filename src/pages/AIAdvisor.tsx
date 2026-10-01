@@ -79,11 +79,18 @@ export function AIAdvisor() {
       }
       resolveAdvisorTurn({ answer: data.answer });
     } catch (err) {
-      // Surface the server's own message when it gave one (e.g. a specific rate-limit
-      // notice with a wait time) — it's more useful than the generic fallback, which should
-      // only be shown when the failure has no better explanation (a network drop, a timeout).
+      // An abort (our own client-side timeout firing) surfaces as a raw, unfriendly browser
+      // message ("The operation was aborted", "signal is aborted without reason") if treated
+      // like any other error — show the same clear wording the server uses for its own
+      // timeout instead. Otherwise, surface the server's own message when it gave one (e.g. a
+      // specific rate-limit notice with a wait time) — it's more useful than the generic
+      // fallback, which should only be shown when the failure has no better explanation.
+      const isAbort = err instanceof Error && err.name === "AbortError";
       const serverMessage = err instanceof Error ? err.message : "";
-      resolveAdvisorTurn({ answer: serverMessage || t("advisor.errorReply"), error: true });
+      resolveAdvisorTurn({
+        answer: isAbort ? t("advisor.timeoutReply") : serverMessage || t("advisor.errorReply"),
+        error: true,
+      });
     } finally {
       clearTimeout(timeout);
       busyRef.current = false;

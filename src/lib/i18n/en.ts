@@ -348,6 +348,7 @@ const en = {
     inputPlaceholder: "Ask GrowMate anything about your business...",
     askBtn: "Ask",
     errorReply: "Sorry, I couldn't process that right now. Please try again.",
+    timeoutReply: "The advisor took too long to respond. Please try again.",
     retryCountdown: "The advisor is busy right now — you can try again in {{seconds}}s...",
     retryNowReply: "You can try asking again now.",
     questions: {
