@@ -415,7 +415,7 @@ export function MoneyInOut() {
                     <p className="text-sm font-semibold text-gray-800">
                       {t(tx.due.type === "customer" ? "money.duePaymentFromLabel" : "money.duePaymentToLabel", { name: tx.due.name })}
                     </p>
-                    <p className="text-xs text-gray-400">{formatDate(tx.payment.date, language)}</p>
+                    <p className="text-xs text-gray-400">{formatDate(tx.payment.date, language) || t("common.dash")}</p>
                   </div>
                   <span className={`font-semibold ${tx.due.type === "customer" ? "text-brand-600" : "text-red-500"}`}>
                     {tx.due.type === "customer" ? "+" : "-"}
