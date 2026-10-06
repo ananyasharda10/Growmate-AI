@@ -118,8 +118,17 @@ export function buildRestockSuggestions(
     const avgDailyQty = avgDailySalesQty(product.id, sales);
     const days = estimatedDaysRemaining(product.stock, avgDailyQty);
     const bySalesRate = avgDailyQty > 0 ? Math.ceil(avgDailyQty * 14) : 0;
-    const byReorderLevel = Math.max(product.reorderLevel * 2 - product.stock, 0);
-    const idealSuggestedQty = Math.max(bySalesRate, byReorderLevel, product.reorderLevel || 1);
+    // Simply enough to reach the reorder level, not a 2x buffer above it — a reported
+    // mismatch between this figure and the Inventory page's own reorder level/stock numbers
+    // showed that a buffer here reads as the app recommending a wrong quantity, not a
+    // deliberate safety margin.
+    const byReorderLevel = Math.max(product.reorderLevel - product.stock, 0);
+    // Expired stock that's already at/above the reorder level has byReorderLevel of 0 (there's
+    // "enough" by the numbers), but none of it is sellable — this floor is only there for that
+    // case, so a non-expired low-stock product is governed purely by byReorderLevel/bySalesRate
+    // above, not nudged up to a full reorderLevel's worth regardless of how little is missing.
+    const expiredMinimum = isExpired(product) ? product.reorderLevel || 1 : 0;
+    const idealSuggestedQty = Math.max(bySalesRate, byReorderLevel, expiredMinimum);
 
     const idealCost = idealSuggestedQty * product.cost;
     let affordableQty = idealSuggestedQty;
