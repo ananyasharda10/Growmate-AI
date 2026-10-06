@@ -14,6 +14,11 @@ import { addDays, todayISO } from "../lib/id";
 // server arrives first — this is just a backstop in case the network or function hangs
 // with no response at all, so the loading indicator can never spin forever.
 const CLIENT_TIMEOUT_MS = 25_000;
+// A second, independent backstop — comfortably longer than CLIENT_TIMEOUT_MS plus a typical
+// rate-limit countdown, but nowhere near the multi-minute hangs reported in production. Fires
+// off a plain timer with no dependency on fetch/AbortController actually working, so a
+// question can never be left hanging indefinitely even if that mechanism somehow doesn't.
+const HARD_DEADLINE_MS = 50_000;
 
 export function AIAdvisor() {
   const { t, language } = useT();
@@ -58,44 +63,70 @@ export function AIAdvisor() {
     // navigating away and back renders the same saved answers instead of losing them.
     addAdvisorTurn(question);
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
-
-    try {
-      const res = await fetch("/api/advisor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, language, context: buildAdvisorContext(ctx), today: todayISO() }),
-        signal: controller.signal,
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.answer) {
-        if (res.status === 429 && typeof data.retryAfterSeconds === "number" && data.retryAfterSeconds > 0) {
-          await runRetryCountdown(data.retryAfterSeconds);
-          resolveAdvisorTurn({ answer: t("advisor.retryNowReply"), error: true });
-          return;
-        }
-        throw new Error(data?.error || "");
-      }
-      resolveAdvisorTurn({ answer: data.answer });
-    } catch (err) {
-      // An abort (our own client-side timeout firing) surfaces as a raw, unfriendly browser
-      // message ("The operation was aborted", "signal is aborted without reason") if treated
-      // like any other error — show the same clear wording the server uses for its own
-      // timeout instead. Otherwise, surface the server's own message when it gave one (e.g. a
-      // specific rate-limit notice with a wait time) — it's more useful than the generic
-      // fallback, which should only be shown when the failure has no better explanation.
-      const isAbort = err instanceof Error && err.name === "AbortError";
-      const serverMessage = err instanceof Error ? err.message : "";
-      resolveAdvisorTurn({
-        answer: isAbort ? t("advisor.timeoutReply") : serverMessage || t("advisor.errorReply"),
-        error: true,
-      });
-    } finally {
-      clearTimeout(timeout);
-      busyRef.current = false;
-      setBusy(false);
+    // `settled` guards against the request path and the hard deadline below both trying to
+    // resolve the same turn — only the first one to finish actually writes an answer.
+    let settled = false;
+    function resolveOnce(patch: Parameters<typeof resolveAdvisorTurn>[0]) {
+      if (settled) return;
+      settled = true;
+      setRetryCountdown(null);
+      resolveAdvisorTurn(patch);
     }
+
+    const controller = new AbortController();
+    const abortTimer = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
+
+    async function runRequest() {
+      try {
+        const res = await fetch("/api/advisor", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question, language, context: buildAdvisorContext(ctx), today: todayISO() }),
+          signal: controller.signal,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.answer) {
+          if (res.status === 429 && typeof data.retryAfterSeconds === "number" && data.retryAfterSeconds > 0) {
+            await runRetryCountdown(data.retryAfterSeconds);
+            resolveOnce({ answer: t("advisor.retryNowReply"), error: true });
+            return;
+          }
+          throw new Error(data?.error || "");
+        }
+        resolveOnce({ answer: data.answer });
+      } catch (err) {
+        // An abort (our own client-side timeout firing) surfaces as a raw, unfriendly browser
+        // message ("The operation was aborted", "signal is aborted without reason") if treated
+        // like any other error — show the same clear wording the server uses for its own
+        // timeout instead. Otherwise, surface the server's own message when it gave one (e.g.
+        // a specific rate-limit notice with a wait time) — it's more useful than the generic
+        // fallback, which should only be shown when the failure has no better explanation.
+        const isAbort = err instanceof Error && err.name === "AbortError";
+        const serverMessage = err instanceof Error ? err.message : "";
+        resolveOnce({
+          answer: isAbort ? t("advisor.timeoutReply") : serverMessage || t("advisor.errorReply"),
+          error: true,
+        });
+      }
+    }
+
+    // A hard backstop that doesn't depend on fetch/AbortController working correctly at all —
+    // a real failure reported in testing left a question hanging for 3+ minutes in production,
+    // well past both this client's 25s abort and the server's own 20s one, meaning something
+    // can apparently keep the request from ever settling through the normal path. This is a
+    // plain timer with no dependency on the network layer, so it fires regardless of why the
+    // normal path didn't.
+    const hardDeadline = new Promise<void>((resolve) => setTimeout(resolve, HARD_DEADLINE_MS));
+
+    await Promise.race([runRequest(), hardDeadline]);
+    // Best-effort: try to actually cancel a still-pending request (e.g. if the hard deadline
+    // won the race), not just give up waiting on it client-side.
+    controller.abort();
+    resolveOnce({ answer: t("advisor.timeoutReply"), error: true });
+
+    clearTimeout(abortTimer);
+    busyRef.current = false;
+    setBusy(false);
   }
 
   function runRetryCountdown(seconds: number): Promise<void> {
