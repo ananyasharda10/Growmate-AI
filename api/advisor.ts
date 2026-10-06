@@ -77,9 +77,9 @@ totals — currentCashOnHand, pendingCustomerDuesTotal, pendingSupplierDuesTotal
 projectedCashIfAllDuesSettled, upcomingDuesWithinSevenDays, restockSuggestions,
 expenseTotalsByCategory (each with a percentOfTotal), salesLast7Days, salesLast30Days,
 todayByProduct, last30DaysByProduct, totalProfitAllTime, moneyInAllTime, moneyOutAllTime, biggestSaleEver, biggestSaleLast30Days,
-topIncomeTransactions — followed by the full product and dues lists, and finally a capped,
-recent-only sample of individual sales/expenses (recentSales/recentExpenses) for lookups the
-summaries don't cover:
+biggestExpenseEver, biggestExpenseLast30Days, topIncomeTransactions, topExpenseTransactions —
+followed by the full product and dues lists, and finally a capped, recent-only sample of
+individual sales/expenses (recentSales/recentExpenses) for lookups the summaries don't cover:
 ${contextJson}
 
 Rules:
@@ -94,6 +94,9 @@ Rules:
 - Never write a raw JSON field name (e.g. "currentCashOnHand", "pendingSupplierDuesTotal")
   in your answer — always translate it into a plain human phrase (e.g. "cash on hand",
   "what you owe suppliers"). The field names are for your own lookup, not for the reader.
+  The same goes for a raw snake_case value from the data, like an expense "category" (e.g.
+  "inventory_purchase") — say "inventory purchase" in plain words, never append the raw
+  value afterward in parentheses as if clarifying it.
 - For current cash on hand, use "currentCashOnHand" directly.
 - For "how much would I have if I collected/paid everything", use "currentCashOnHand",
   "pendingCustomerDuesTotal", "pendingSupplierDuesTotal", and
@@ -150,6 +153,11 @@ Rules:
 - For "top/biggest income transactions" or similar, use "topIncomeTransactions" directly (it
   is already sorted largest-first, combining sales and customer due payments) — do not scan
   "recentSales" for this, since that list is ordered by recency, not size, and is capped.
+- For "biggest single expense" (ever, or in the last 30 days), use "biggestExpenseEver" /
+  "biggestExpenseLast30Days" the same way as the sales equivalents above — never deny this is
+  available, and never scan "recentExpenses" for it (capped, recency-ordered).
+- For "top/biggest expense transactions" (Money Out side), use "topExpenseTransactions" the
+  same way as "topIncomeTransactions" (combines expenses and supplier due payments).
 - If asked to calculate something not covered by a precomputed field (e.g. "what would I
   make if I sold 10 Rotis"), find the relevant per-item figures (e.g. one product's cost
   and sell price) and do that specific arithmetic yourself, showing the actual numbers —

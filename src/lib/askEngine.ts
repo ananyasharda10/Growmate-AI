@@ -256,6 +256,24 @@ export function buildAdvisorContext(ctx: AskContext): string {
       .filter((d) => d.type === "customer")
       .flatMap((d) => d.payments.map((p) => ({ source: d.name, amount: p.amount, date: dateOnly(p.date) }))),
   ]);
+  const topExpenseTransactions = topTransactions([
+    ...ctx.expenses.filter((e) => e.paymentMethod !== "credit").map((e) => ({ source: e.category, amount: e.amount, date: localDateOf(e.date) })),
+    ...ctx.dues
+      .filter((d) => d.type === "supplier")
+      .flatMap((d) => d.payments.map((p) => ({ source: d.name, amount: p.amount, date: dateOnly(p.date) }))),
+  ]);
+
+  // Mirrors biggestSale above, but for expenses — the same "biggest single X" question asked
+  // about Money Out instead of Money In hit the identical gap (no precomputed field, only a
+  // capped/recency-ordered recentExpenses list), and produced the same denial in testing.
+  function biggestExpense(expenses: Expense[]) {
+    return expenses.reduce<{ category: string; amount: number; date: string; supplierName: string | null } | null>(
+      (best, e) => (!best || e.amount > best.amount ? { category: e.category, amount: e.amount, date: localDateOf(e.date), supplierName: e.supplierName ?? null } : best),
+      null
+    );
+  }
+  const biggestExpenseEver = biggestExpense(ctx.expenses);
+  const biggestExpenseLast30Days = biggestExpense(ctx.expenses.filter((e) => withinLastDays(localDateOf(e.date), 30, today)));
 
   function biggestSale(sales: Sale[]) {
     return sales.reduce<{ product: string; quantity: number; unitPrice: number; total: number; date: string } | null>(
@@ -317,7 +335,10 @@ export function buildAdvisorContext(ctx: AskContext): string {
     moneyOutAllTime,
     biggestSaleEver,
     biggestSaleLast30Days,
+    biggestExpenseEver,
+    biggestExpenseLast30Days,
     topIncomeTransactions,
+    topExpenseTransactions,
     knownCustomerNames,
     knownSupplierNames,
     knownProductNames,
