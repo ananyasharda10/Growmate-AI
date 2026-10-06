@@ -70,6 +70,8 @@ export function Auth() {
             <button
               type="button"
               onClick={() => setMode("signin")}
+              aria-pressed={mode === "signin"}
+              aria-label={t("auth.signInTabLabel")}
               className={`cursor-pointer rounded-md py-2 text-sm font-semibold ${
                 mode === "signin" ? "bg-white shadow-sm text-gray-900" : "text-gray-500"
               }`}
@@ -79,6 +81,8 @@ export function Auth() {
             <button
               type="button"
               onClick={() => setMode("signup")}
+              aria-pressed={mode === "signup"}
+              aria-label={t("auth.signUpTabLabel")}
               className={`cursor-pointer rounded-md py-2 text-sm font-semibold ${
                 mode === "signup" ? "bg-white shadow-sm text-gray-900" : "text-gray-500"
               }`}

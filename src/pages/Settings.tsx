@@ -151,7 +151,7 @@ export function Settings() {
         <p className="text-sm text-gray-600">{t("settings.roleLine")}</p>
         <div className="mt-4">
           <Label>{t("settings.languageLabel")}</Label>
-          <LanguageToggle />
+          <LanguageToggle context="Settings" />
         </div>
       </Card>
 
@@ -159,12 +159,22 @@ export function Settings() {
         <h2 className="mb-4 text-base font-semibold text-gray-900">{t("settings.businessTitle")}</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <Label>{t("settings.businessNameLabel")}</Label>
-            <Input maxLength={MAX_BUSINESS_NAME_LENGTH} value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
+            <Label htmlFor="settings-business-name">{t("settings.businessNameLabel")}</Label>
+            <Input
+              id="settings-business-name"
+              maxLength={MAX_BUSINESS_NAME_LENGTH}
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+            />
+            {/* A paste longer than the limit is cut down to exactly MAX_BUSINESS_NAME_LENGTH
+                characters silently (the browser's own maxlength behavior) — this count is the
+                only visible signal that happened, since nothing else would show up as an
+                explicit warning. */}
+            <p className="mt-1 text-xs text-gray-400">{t("settings.charCount", { count: businessName.length, max: MAX_BUSINESS_NAME_LENGTH })}</p>
           </div>
           <div>
-            <Label>{t("settings.businessTypeLabel")}</Label>
-            <Select value={businessType} onChange={(e) => setBusinessType(e.target.value as BusinessType)}>
+            <Label htmlFor="settings-business-type">{t("settings.businessTypeLabel")}</Label>
+            <Select id="settings-business-type" value={businessType} onChange={(e) => setBusinessType(e.target.value as BusinessType)}>
               {BUSINESS_TYPE_VALUES.map((v) => (
                 <option key={v} value={v}>
                   {t(`enums.businessType.${v}`)}
@@ -173,8 +183,9 @@ export function Settings() {
             </Select>
           </div>
           <div>
-            <Label>{t("settings.currencyLabel")}</Label>
+            <Label htmlFor="settings-currency">{t("settings.currencyLabel")}</Label>
             <Select
+              id="settings-currency"
               value={currency}
               onChange={(e) => {
                 const next = e.target.value as Currency;
@@ -196,12 +207,12 @@ export function Settings() {
             </Select>
           </div>
           <div>
-            <Label>{t("settings.defaultLowStockLabel")}</Label>
-            <NumberInput value={lowStock} onChange={setLowStock} />
+            <Label htmlFor="settings-low-stock">{t("settings.defaultLowStockLabel")}</Label>
+            <NumberInput id="settings-low-stock" value={lowStock} onChange={setLowStock} />
           </div>
           <div>
-            <Label>{t("settings.openingCashLabel")}</Label>
-            <NumberInput value={opening} onChange={setOpening} />
+            <Label htmlFor="settings-opening-cash">{t("settings.openingCashLabel")}</Label>
+            <NumberInput id="settings-opening-cash" value={opening} onChange={setOpening} />
           </div>
         </div>
         {businessError && <p className="mt-2 text-sm text-red-600">{businessError}</p>}
@@ -214,12 +225,12 @@ export function Settings() {
         <h2 className="mb-4 text-base font-semibold text-gray-900">{t("settings.passwordTitle")}</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <Label>{t("settings.newPasswordLabel")}</Label>
-            <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            <Label htmlFor="settings-new-password">{t("settings.newPasswordLabel")}</Label>
+            <Input id="settings-new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
           </div>
           <div>
-            <Label>{t("settings.confirmPasswordLabel")}</Label>
-            <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+            <Label htmlFor="settings-confirm-password">{t("settings.confirmPasswordLabel")}</Label>
+            <Input id="settings-confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
           </div>
         </div>
         {passwordMsg && <p className="mt-2 text-sm text-gray-600">{passwordMsg}</p>}
@@ -274,6 +285,21 @@ export function Settings() {
         danger
         onConfirm={() => {
           resetDemoData();
+          // This form's fields are local drafts, only ever initialized once from `settings`
+          // on mount — resetDemoData() replaces the store's settings with the fresh seed's
+          // (business name, type, low-stock level, opening cash — currency is preserved),
+          // but without this, these local drafts would keep showing the pre-reset values,
+          // visibly disagreeing with the sidebar/nav (which reads the store directly) until
+          // an unrelated re-render happened to pick them up. A real failure seen in testing:
+          // the Settings business-name field stayed on the old name after a reset while the
+          // sidebar already showed the new one. resetDemoData() runs synchronously, so the
+          // store already reflects the new values by this point.
+          const fresh = useStore.getState().settings;
+          setBusinessName(fresh.businessName);
+          setBusinessType(fresh.businessType);
+          setCurrency(fresh.currency);
+          setLowStock(fresh.defaultLowStockLevel);
+          setOpening(fresh.openingCashBalance);
           setConfirmDemoReset(false);
         }}
         onCancel={() => setConfirmDemoReset(false)}

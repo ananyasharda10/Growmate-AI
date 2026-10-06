@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
   CalendarClock,
@@ -39,6 +39,7 @@ import {
 
 export function Dashboard() {
   const { t, language } = useT();
+  const navigate = useNavigate();
   const products = useStore((s) => s.products);
   const sales = useStore((s) => s.sales);
   const expenses = useStore((s) => s.expenses);
@@ -169,8 +170,26 @@ export function Dashboard() {
 
   const isEmpty = products.length === 0 && sales.length === 0;
 
-  const cashReceivedToday = cashReceivedFromSales(todaysSales);
-  const expensesToday = expenses.filter((e) => localDateOf(e.date) === today).reduce((s, e) => s + e.amount, 0);
+  // Due-payment dates are stored as plain "YYYY-MM-DD" (no time-of-day), set by
+  // addDuePayment's own todayISO() default — comparable to `today` directly.
+  const customerDuePaymentsToday = dues
+    .filter((d) => d.type === "customer")
+    .flatMap((d) => d.payments)
+    .filter((p) => p.date === today)
+    .reduce((s, p) => s + p.amount, 0);
+  const supplierDuePaymentsToday = dues
+    .filter((d) => d.type === "supplier")
+    .flatMap((d) => d.payments)
+    .filter((p) => p.date === today)
+    .reduce((s, p) => s + p.amount, 0);
+  // Mirrors the same two-source convention used everywhere else in the app for "money in"/
+  // "money out" (see moneyOutTotal above, and Money In/Out's own moneyIn/moneyOut) — a due
+  // payment is real cash moving today just as much as a sale or a recorded expense is. A real
+  // failure seen in testing: recording a due payment moved cash-on-hand and the Money In
+  // total, but the daily summary's "Cash received" line stayed at $0.00 because it only ever
+  // looked at today's sales.
+  const cashReceivedToday = cashReceivedFromSales(todaysSales) + customerDuePaymentsToday;
+  const expensesToday = expenses.filter((e) => localDateOf(e.date) === today).reduce((s, e) => s + e.amount, 0) + supplierDuePaymentsToday;
   const creditAddedToday = dues
     .filter((d) => d.type === "customer" && d.autoCreated && localDateOf(d.createdAt) === today)
     .reduce((s, d) => s + d.originalAmount, 0);
@@ -234,27 +253,23 @@ export function Dashboard() {
         </Card>
       )}
 
+      {/* A plain onClick navigation, not a <Link> wrapping a <Button> — nesting a <button>
+          inside an <a> is invalid HTML and was exposing two overlapping controls with the
+          identical accessible name (e.g. "Record Sale") to assistive tech, a real failure
+          seen in testing. */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Link to="/money">
-          <Button variant="secondary" fullWidth icon={<ShoppingCart size={16} />}>
-            {t("dashboard.recordSale")}
-          </Button>
-        </Link>
-        <Link to="/money">
-          <Button variant="secondary" fullWidth icon={<Receipt size={16} />}>
-            {t("dashboard.recordExpense")}
-          </Button>
-        </Link>
-        <Link to="/inventory">
-          <Button variant="secondary" fullWidth icon={<PackagePlus size={16} />}>
-            {t("dashboard.addStock")}
-          </Button>
-        </Link>
-        <Link to="/dues">
-          <Button variant="secondary" fullWidth icon={<UserPlus size={16} />}>
-            {t("dashboard.addDue")}
-          </Button>
-        </Link>
+        <Button variant="secondary" fullWidth icon={<ShoppingCart size={16} />} onClick={() => navigate("/money")}>
+          {t("dashboard.recordSale")}
+        </Button>
+        <Button variant="secondary" fullWidth icon={<Receipt size={16} />} onClick={() => navigate("/money")}>
+          {t("dashboard.recordExpense")}
+        </Button>
+        <Button variant="secondary" fullWidth icon={<PackagePlus size={16} />} onClick={() => navigate("/inventory")}>
+          {t("dashboard.addStock")}
+        </Button>
+        <Button variant="secondary" fullWidth icon={<UserPlus size={16} />} onClick={() => navigate("/dues")}>
+          {t("dashboard.addDue")}
+        </Button>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -292,7 +307,14 @@ export function Dashboard() {
             {t("dashboard.shareSummary")}
           </Button>
         </div>
-        <pre className="whitespace-pre-wrap rounded-xl bg-gray-50 p-4 font-sans text-sm text-gray-600">{summaryText}</pre>
+        {/* Explicit aria-label with the full text — a real failure seen in testing was this
+            card's content getting cut off mid-word in an accessibility-tree read, despite no
+            CSS truncation anywhere in this element (whitespace-pre-wrap only wraps, never
+            clips). Same mitigation as the Money page's transaction rows and the stat cards
+            above. */}
+        <pre className="whitespace-pre-wrap rounded-xl bg-gray-50 p-4 font-sans text-sm text-gray-600" aria-label={summaryText}>
+          {summaryText}
+        </pre>
       </Card>
 
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">

@@ -3,8 +3,12 @@ import { useEffect, useState, type InputHTMLAttributes, type ReactNode, type Sel
 const baseInput =
   "w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 placeholder:text-gray-400";
 
-export function Label({ children }: { children: ReactNode }) {
-  return <label className="mb-1.5 block text-sm font-medium text-gray-700">{children}</label>;
+export function Label({ children, htmlFor }: { children: ReactNode; htmlFor?: string }) {
+  return (
+    <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium text-gray-700">
+      {children}
+    </label>
+  );
 }
 
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {

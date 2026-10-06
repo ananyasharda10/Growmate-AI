@@ -60,7 +60,7 @@ export function Sidebar({ onShowTour }: { onShowTour: () => void }) {
 
       <div className="mt-4 border-t border-gray-100 pt-4">
         <div className="mb-3 px-1">
-          <LanguageToggle className="w-full [&>button]:flex-1" />
+          <LanguageToggle className="w-full [&>button]:flex-1" context="Sidebar" />
         </div>
         <div className="mb-2 flex items-center gap-3 rounded-lg bg-brand-50 px-3 py-2.5">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white">

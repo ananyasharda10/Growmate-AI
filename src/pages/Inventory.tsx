@@ -97,6 +97,7 @@ export function Inventory() {
   const [stockInTarget, setStockInTarget] = useState<Product | null>(null);
   const [stockInQty, setStockInQty] = useState(1);
   const [stockInNote, setStockInNote] = useState("");
+  const [stockInError, setStockInError] = useState("");
 
   const [adjustTarget, setAdjustTarget] = useState<Product | null>(null);
   const [adjustType, setAdjustType] = useState<StockMovementType>("damaged");
@@ -259,7 +260,12 @@ export function Inventory() {
   }
 
   function submitStockIn() {
-    if (!stockInTarget || stockInQty <= 0) return;
+    if (!stockInTarget) return;
+    if (stockInQty <= 0) {
+      setStockInError(t("inventory.invalidStockInQty"));
+      return;
+    }
+    setStockInError("");
     if (stockInQty > LARGE_QTY_THRESHOLD) {
       setPendingLargeQty({ type: "stockIn", qty: stockInQty });
       return;
@@ -273,6 +279,7 @@ export function Inventory() {
     setStockInTarget(null);
     setStockInQty(1);
     setStockInNote("");
+    setStockInError("");
   }
 
   function submitAdjust() {
@@ -424,6 +431,7 @@ export function Inventory() {
                               // (e.g. "50") shows up as if it were this product's default.
                               setStockInQty(1);
                               setStockInNote("");
+                              setStockInError("");
                               setStockInTarget(p);
                             }}
                           >
@@ -460,7 +468,13 @@ export function Inventory() {
           </tbody>
         </table>
       </Card>
-      <p className="mt-2 text-xs text-gray-400">{t("inventory.daysLeftNote")}</p>
+      {/* Explicit aria-label with the full text, same mitigation as the Money page's
+          transaction rows and the Dashboard's stat cards — an accessibility-tree read was
+          reported cutting this text off mid-sentence despite the full sentence being visibly
+          rendered with no CSS truncation anywhere in this element. */}
+      <p className="mt-2 text-xs text-gray-400" aria-label={t("inventory.daysLeftNote")}>
+        {t("inventory.daysLeftNote")}
+      </p>
 
       {/* Add / Edit form */}
       <Modal open={formOpen} onClose={() => setFormOpen(false)} title={editing ? t("inventory.editModalTitle") : t("inventory.addModalTitle")}>
@@ -468,6 +482,11 @@ export function Inventory() {
           <div>
             <Label>{t("inventory.productNameLabel")}</Label>
             <Input maxLength={MAX_NAME_LENGTH} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            {/* A paste longer than the limit is cut down to exactly MAX_NAME_LENGTH characters
+                silently (the browser's own maxlength behavior) — this count is the only
+                visible signal that happened, since nothing else would show up as an explicit
+                warning. */}
+            <p className="mt-1 text-xs text-gray-400">{t("inventory.charCount", { count: form.name.length, max: MAX_NAME_LENGTH })}</p>
           </div>
           {matchingProduct && (
             <p className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -519,7 +538,13 @@ export function Inventory() {
           )}
           {formError && <p className="text-sm text-red-600">{formError}</p>}
           <Button fullWidth onClick={saveForm}>
-            {matchingProduct ? t("inventory.createSeparateBtn") : editing ? t("inventory.saveChangesBtn") : t("inventory.addProductBtn")}
+            {matchingProduct
+              ? editing
+                ? t("inventory.saveAnywayBtn")
+                : t("inventory.createSeparateBtn")
+              : editing
+              ? t("inventory.saveChangesBtn")
+              : t("inventory.addProductBtn")}
           </Button>
         </div>
       </Modal>
@@ -535,6 +560,7 @@ export function Inventory() {
             <Label>{t("inventory.noteOptionalLabel")}</Label>
             <Textarea rows={2} value={stockInNote} onChange={(e) => setStockInNote(e.target.value)} />
           </div>
+          {stockInError && <p className="text-sm text-red-600">{stockInError}</p>}
           <Button fullWidth onClick={submitStockIn}>
             {t("inventory.addStockBtn")}
           </Button>

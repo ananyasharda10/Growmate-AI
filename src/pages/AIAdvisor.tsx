@@ -52,10 +52,29 @@ export function AIAdvisor() {
   // from its own closure. A ref is set synchronously, so the very next call sees the lock
   // immediately regardless of render timing.
   const busyRef = useRef(false);
+  // A visible, auto-clearing notice for a submit that gets rejected before it ever becomes a
+  // turn (already busy, or an exact duplicate of the pending question) — a real failure seen
+  // in testing was a submit disabling the input briefly with no question added, no error, and
+  // no wait notice at all, which looked exactly like a no-op and invited an immediate re-submit
+  // that then burned into the rate limit. Every rejected submit now says SOMETHING.
+  const [blockedNotice, setBlockedNotice] = useState(false);
+  const blockedNoticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function flashBlockedNotice() {
+    setBlockedNotice(true);
+    if (blockedNoticeTimer.current) clearTimeout(blockedNoticeTimer.current);
+    blockedNoticeTimer.current = setTimeout(() => setBlockedNotice(false), 2500);
+  }
 
-  async function ask(question: string) {
+  // Returns whether the question actually got submitted — false means it was rejected (busy,
+  // or an exact duplicate of the still-pending question), which the caller uses to decide
+  // whether to clear its own draft text (a rejected submit shouldn't lose what was typed).
+  async function ask(question: string): Promise<boolean> {
     const trimmed = question.trim();
-    if (!trimmed || busyRef.current) return;
+    if (!trimmed) return false;
+    if (busyRef.current) {
+      flashBlockedNotice();
+      return false;
+    }
     // A second, independent guard against the same question being submitted twice — the
     // busyRef check above should already prevent this (a synchronous lock set before any
     // await), but a real failure was seen in testing where a lagged transcript render let an
@@ -63,7 +82,10 @@ export function AIAdvisor() {
     // checks the conversation state itself, which is the one place a genuine duplicate would
     // actually show up, regardless of how a second call managed to get through.
     const lastTurn = useStore.getState().advisorConversation.at(-1);
-    if (lastTurn && lastTurn.answer === null && lastTurn.question === trimmed) return;
+    if (lastTurn && lastTurn.answer === null && lastTurn.question === trimmed) {
+      flashBlockedNotice();
+      return false;
+    }
     busyRef.current = true;
     setBusy(true);
     // Once a turn's answer is set below, it is never touched again — earlier turns in the
@@ -135,6 +157,7 @@ export function AIAdvisor() {
     clearTimeout(abortTimer);
     busyRef.current = false;
     setBusy(false);
+    return true;
   }
 
   function runRetryCountdown(seconds: number): Promise<void> {
@@ -208,7 +231,7 @@ export function AIAdvisor() {
       <Card className="p-6">
         <div className="mb-4 flex items-center gap-2">
           <Sparkles size={18} className="text-brand-600" />
-          <h2 className="text-base font-semibold text-gray-900">{t("advisor.title")}</h2>
+          <h2 className="text-base font-semibold text-gray-900">{t("advisor.chatSectionTitle")}</h2>
         </div>
 
         <div className="mb-4 flex flex-wrap gap-2">
@@ -260,14 +283,16 @@ export function AIAdvisor() {
         </div>
 
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            // Cleared here (not inside ask() itself) so a sample-question chip — which also
-            // calls ask() directly, with its own fixed text — never wipes out a draft the user
-            // was mid-typing in this box; only an actual submit from this box should clear it.
+            // Cleared only once ask() confirms it actually proceeded (not inside ask() itself,
+            // so a sample-question chip — which also calls ask() directly, with its own fixed
+            // text — never wipes out a draft the user was mid-typing in this box) — a rejected
+            // submit (already busy, or a duplicate of the pending question) leaves the typed
+            // text right where it was instead of silently discarding it.
             const question = input;
-            setInput("");
-            ask(question);
+            const submitted = await ask(question);
+            if (submitted) setInput("");
           }}
           className="flex gap-2"
         >
@@ -276,6 +301,7 @@ export function AIAdvisor() {
             {t("advisor.askBtn")}
           </Button>
         </form>
+        {blockedNotice && <p className="mt-2 text-xs text-gray-500">{t("advisor.pleaseWaitNotice")}</p>}
       </Card>
     </div>
   );
