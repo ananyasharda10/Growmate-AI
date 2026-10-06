@@ -94,6 +94,20 @@ export function Dashboard() {
     return sum + marginAmount(costAtSale, s.unitPrice) * s.quantity;
   }, 0);
 
+  // A smaller, independently-checkable figure alongside the all-time total above — this is
+  // the one real ask behind "I can't verify this number": a reader can manually recompute a
+  // single calendar month's sales by hand far more easily than the entire sales history, which
+  // the all-time figure alone gives no way to do. Same formula as profitTracked, just scoped
+  // to sales dated in the current calendar month.
+  const thisMonthPrefix = today.slice(0, 7);
+  const profitTrackedThisMonth = sales.reduce((sum, s) => {
+    if (!s.productId || localDateOf(s.date).slice(0, 7) !== thisMonthPrefix) return sum;
+    const product = products.find((p) => p.id === s.productId);
+    const costAtSale = s.unitCost ?? product?.cost;
+    if (costAtSale === undefined) return sum;
+    return sum + marginAmount(costAtSale, s.unitPrice) * s.quantity;
+  }, 0);
+
   type Action = { icon: React.ReactNode; tone: "red" | "amber" | "gray"; text: string; to: string };
   const actions: Action[] = [];
 
@@ -261,7 +275,11 @@ export function Dashboard() {
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <MiniStat label={t("dashboard.miniRestocks")} value={formatMoney(0, currency)} />
-          <MiniStat label={t("dashboard.miniProfit")} value={formatMoney(profitTracked, currency)} />
+          <MiniStat
+            label={t("dashboard.miniProfit")}
+            value={formatMoney(profitTracked, currency)}
+            sub={t("dashboard.miniProfitSub", { amount: formatMoney(profitTrackedThisMonth, currency) })}
+          />
           <MiniStat label={t("dashboard.miniExpenses")} value={formatMoney(moneyOutTotal, currency)} />
         </div>
         <p className="mt-3 flex items-center gap-1 text-xs text-gray-400">{t("dashboard.poweredBy")}</p>
@@ -388,7 +406,12 @@ export function Dashboard() {
 
 function StatCard({ label, value, icon, sub }: { label: string; value: string; icon: React.ReactNode; sub?: string }) {
   return (
-    <Card className="p-5">
+    // An explicit aria-label with the card's full content (not just relying on the nested
+    // paragraphs being individually exposed) — a real failure seen in testing: a card's own
+    // numeric value (a "₹0.00"-style zero amount) was visibly present but missing from an
+    // accessibility-tree dump, the same failure pattern seen on the Money page's transaction
+    // rows (see MoneyInOut.tsx).
+    <Card className="p-5" aria-label={sub ? `${label}: ${value}, ${sub}` : `${label}: ${value}`}>
       <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-700">{icon}</div>
       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
       <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
@@ -397,11 +420,12 @@ function StatCard({ label, value, icon, sub }: { label: string; value: string; i
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
+function MiniStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="rounded-xl bg-brand-50 p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
       <p className="mt-1 text-xl font-bold text-brand-700">{value}</p>
+      {sub && <p className="mt-1 text-xs text-gray-400">{sub}</p>}
     </div>
   );
 }

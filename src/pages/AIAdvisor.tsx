@@ -54,7 +54,16 @@ export function AIAdvisor() {
   const busyRef = useRef(false);
 
   async function ask(question: string) {
-    if (!question.trim() || busyRef.current) return;
+    const trimmed = question.trim();
+    if (!trimmed || busyRef.current) return;
+    // A second, independent guard against the same question being submitted twice — the
+    // busyRef check above should already prevent this (a synchronous lock set before any
+    // await), but a real failure was seen in testing where a lagged transcript render let an
+    // identical question through a second time anyway, leaving a duplicated Q&A pair. This
+    // checks the conversation state itself, which is the one place a genuine duplicate would
+    // actually show up, regardless of how a second call managed to get through.
+    const lastTurn = useStore.getState().advisorConversation.at(-1);
+    if (lastTurn && lastTurn.answer === null && lastTurn.question === trimmed) return;
     busyRef.current = true;
     setBusy(true);
     // Once a turn's answer is set below, it is never touched again — earlier turns in the

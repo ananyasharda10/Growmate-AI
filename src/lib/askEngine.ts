@@ -205,8 +205,13 @@ export function buildAdvisorContext(ctx: AskContext): string {
   function perProductStats(days: number) {
     const stats = new Map<string, { qty: number; revenue: number; profit: number }>();
     for (const s of ctx.sales) {
+      // A Quick Cash Sale has no productId (by design — it's an unitemized total, not tied to
+      // any specific product) and its productName is just the literal label "Cash sale" — a
+      // real failure seen in testing: without this check, it was grouped in as if "Cash sale"
+      // were a real product, polluting a per-product breakdown with a fake entry.
+      if (!s.productId) continue;
       if (!withinLastDays(localDateOf(s.date), days, today)) continue;
-      const product = s.productId ? productMap.get(s.productName) : undefined;
+      const product = productMap.get(s.productName);
       const unitCost = s.unitCost ?? product?.cost ?? 0;
       const entry = stats.get(s.productName) ?? { qty: 0, revenue: 0, profit: 0 };
       entry.qty += s.quantity;
