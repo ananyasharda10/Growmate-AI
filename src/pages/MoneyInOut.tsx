@@ -410,7 +410,21 @@ export function MoneyInOut() {
           <ul className="divide-y divide-gray-100">
             {recentTransactions.map((tx) =>
               tx.kind === "duePayment" ? (
-                <li key={tx.payment.id} className="flex items-center justify-between py-3">
+                <li
+                  key={tx.payment.id}
+                  className="flex items-center justify-between py-3"
+                  // An explicit, complete label on the row itself — rather than relying on an
+                  // assistive technology to correctly compute one by walking the nested
+                  // paragraphs/spans below — so the full content (who, when, how much) is
+                  // always announced as one clear whole regardless of how any particular
+                  // screen reader's own accessible-name computation happens to handle this
+                  // layout. A real failure seen in testing: some transaction rows were heard
+                  // with no product/party name at all, even though the same text was visibly
+                  // on screen.
+                  aria-label={`${t(tx.due.type === "customer" ? "money.duePaymentFromLabel" : "money.duePaymentToLabel", { name: tx.due.name })}, ${
+                    formatDate(tx.payment.date, language) || t("common.dash")
+                  }, ${tx.due.type === "customer" ? "+" : "-"}${formatMoney(tx.payment.amount, currency)}`}
+                >
                   <div>
                     <p className="text-sm font-semibold text-gray-800">
                       {t(tx.due.type === "customer" ? "money.duePaymentFromLabel" : "money.duePaymentToLabel", { name: tx.due.name })}
@@ -423,7 +437,17 @@ export function MoneyInOut() {
                   </span>
                 </li>
               ) : tx.kind === "sale" ? (
-                <li key={tx.sale.id} className="flex items-center justify-between py-3">
+                <li
+                  key={tx.sale.id}
+                  className="flex items-center justify-between py-3"
+                  aria-label={`${tx.sale.isQuickCash ? t("money.cashSaleLabel") : tx.sale.productName}, ${formatDate(
+                    localDateOf(tx.sale.date),
+                    language
+                  )}, ${tx.sale.quantity} × ${formatMoney(tx.sale.unitPrice, currency)}, ${t(`enums.paymentMethod.${tx.sale.paymentMethod}`)}, +${formatMoney(
+                    tx.sale.total,
+                    currency
+                  )}`}
+                >
                   <div>
                     <p className="text-sm font-semibold text-gray-800">
                       {tx.sale.isQuickCash ? t("money.cashSaleLabel") : tx.sale.productName}
@@ -449,7 +473,13 @@ export function MoneyInOut() {
                   </div>
                 </li>
               ) : (
-                <li key={tx.expense.id} className="flex items-center justify-between py-3">
+                <li
+                  key={tx.expense.id}
+                  className="flex items-center justify-between py-3"
+                  aria-label={`${t(`enums.expenseCategory.${tx.expense.category}`)}, ${formatDate(localDateOf(tx.expense.date), language)}, ${t(
+                    `enums.paymentMethod.${tx.expense.paymentMethod}`
+                  )}${tx.expense.note ? `, ${tx.expense.note}` : ""}, -${formatMoney(tx.expense.amount, currency)}`}
+                >
                   <div>
                     <p className="text-sm font-semibold text-gray-800">{t(`enums.expenseCategory.${tx.expense.category}`)}</p>
                     <p className="text-xs text-gray-400">

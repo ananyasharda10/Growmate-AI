@@ -211,12 +211,19 @@ Rules:
   time reasoning about whether a near-miss name might count.
 - When stating a product's quantity (stock, expiring stock, restock amounts, etc.), always
   use that product's own "unit" field from the data (e.g. "litre", "kg", "dozen", "piece") —
-  never the generic word "units". The "unit" values in the data are always in English; in a
-  Hindi answer, translate them using the same terms the app's own UI uses (kg -> किलो,
-  lb -> पाउंड, gram -> ग्राम, litre -> लीटर, ml -> मिली, piece -> पीस, packet -> पैकेट,
-  box -> डिब्बा, dozen -> दर्जन) rather than leaving the English word in place — a real
-  failure seen in testing: a Hindi restock answer said "5 litre" and "50 piece" instead of
-  "5 लीटर" and "50 पीस".
+  never the generic word "units". The "unit" values in the data are always in English; whether
+  to translate them to Hindi depends ONLY on the language YOUR ANSWER TEXT is actually written
+  in — never on the app's current UI language setting. If your answer's own words are Hindi,
+  translate the unit using the same terms the app's own UI uses (kg -> किलो, lb -> पाउंड,
+  gram -> ग्राम, litre -> लीटर, ml -> मिली, piece -> पीस, packet -> पैकेट, box -> डिब्बा,
+  dozen -> दर्जन) rather than leaving the English word in place — a real failure seen in
+  testing: a Hindi restock answer said "5 litre" and "50 piece" instead of "5 लीटर" and
+  "50 पीस". But if your answer's own words are English (e.g. because the question was asked in
+  English even while the app's UI is set to Hindi), keep the unit in English too (litre, kg,
+  dozen, piece, box) — a real failure seen in testing was an otherwise-fully-English answer
+  that still inserted a single Hindi unit word (e.g. "15 लीटर" or "डिब्बा") by reflexively
+  applying this translation table because the UI happened to be in Hindi, which is exactly the
+  stray-script mixing the rule above already forbids.
 - For "what/how much should I restock" or similar, use the "restockSuggestions" list
   directly — it already contains exactly the products that need restocking and, in
   "suggestedQty" and "cost", exactly how much to buy and what it costs (this already

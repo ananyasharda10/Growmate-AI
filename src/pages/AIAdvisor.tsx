@@ -56,7 +56,6 @@ export function AIAdvisor() {
   async function ask(question: string) {
     if (!question.trim() || busyRef.current) return;
     busyRef.current = true;
-    setInput("");
     setBusy(true);
     // Once a turn's answer is set below, it is never touched again — earlier turns in the
     // conversation stay exactly as first shown, and the conversation itself is persisted so
@@ -254,7 +253,12 @@ export function AIAdvisor() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            ask(input);
+            // Cleared here (not inside ask() itself) so a sample-question chip — which also
+            // calls ask() directly, with its own fixed text — never wipes out a draft the user
+            // was mid-typing in this box; only an actual submit from this box should clear it.
+            const question = input;
+            setInput("");
+            ask(question);
           }}
           className="flex gap-2"
         >
