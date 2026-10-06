@@ -372,7 +372,16 @@ export const useStore = create<StoreState>()(
       const s = get();
       if (newCurrency === s.settings.currency) return;
       const multiplier = newCurrency === "USD" ? 1 / rate : rate;
-      const convert = (n: number) => Math.round(n * multiplier * 100) / 100;
+      // Rounding each converted value to 2 decimals here (as if it were already the final
+      // on-screen figure) compounds badly for anything DERIVED from several of these fields
+      // at once — total profit (sum of many independently-rounded per-sale prices/costs),
+      // stock value (cost × quantity, summed across products), and margin % (sell vs cost)
+      // all drifted noticeably from a plain single-rate conversion in testing, especially for
+      // small INR per-unit prices (a ₹3 roti → $0.0361 rounds very differently at 2 decimals
+      // vs 4). Stored values aren't display text — only formatMoney needs 2 decimals, so keep
+      // 4 here and let that formatting happen at render time, same as every other amount in
+      // the app.
+      const convert = (n: number) => Math.round(n * multiplier * 10000) / 10000;
 
       const prev = { products: s.products, sales: s.sales, expenses: s.expenses, dues: s.dues, settings: s.settings };
 
