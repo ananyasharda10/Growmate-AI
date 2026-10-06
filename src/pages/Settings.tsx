@@ -9,19 +9,9 @@ import { Input, Label, NumberInput, Select } from "../components/ui/Field";
 import { ConfirmDialog, Modal } from "../components/ui/Modal";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { BUSINESS_TYPE_VALUES, type BusinessType, type Currency, type Product } from "../types";
+import { downloadCsvZip } from "../lib/exportCsv";
 
 const MAX_BUSINESS_NAME_LENGTH = 100;
-
-function downloadCSV(filename: string, rows: (string | number | undefined)[][]) {
-  const csv = rows.map((row) => row.map((cell) => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}
 
 export function Settings() {
   const { t } = useT();
@@ -109,43 +99,40 @@ export function Settings() {
 
   async function exportAll() {
     setExportMsg("");
-    // Browsers block several near-simultaneous programmatic downloads triggered from one
-    // click (only the first one or two go through, the rest are silently dropped) — a short
-    // stagger between each file avoids that, so all four CSVs actually download.
-    const files: [string, (string | number | undefined)[][]][] = [
-      [
-        "products.csv",
-        [
+    // Bundled into one zip rather than 4 separate downloads — browsers block more than one
+    // automatic download per click (Chrome shows a "this site is trying to download multiple
+    // files" prompt and silently drops every file after the first until the user explicitly
+    // allows it), which made it look like only products.csv was ever actually exported.
+    await downloadCsvZip("growmate-export.zip", [
+      {
+        filename: "products.csv",
+        rows: [
           ["name", "unit", "cost", "sell", "stock", "reorderLevel", "expiryDate", "supplier", "archived"],
           ...products.map((p) => [p.name, p.unit, p.cost, p.sell, p.stock, p.reorderLevel, p.expiryDate, p.supplier, String(p.archived)]),
         ],
-      ],
-      [
-        "sales.csv",
-        [
+      },
+      {
+        filename: "sales.csv",
+        rows: [
           ["date", "product", "quantity", "unitPrice", "total", "paymentMethod", "customerName"],
           ...sales.map((s) => [s.date, s.productName, s.quantity, s.unitPrice, s.total, s.paymentMethod, s.customerName]),
         ],
-      ],
-      [
-        "expenses.csv",
-        [
+      },
+      {
+        filename: "expenses.csv",
+        rows: [
           ["date", "category", "amount", "paymentMethod", "supplierName", "note"],
           ...expenses.map((e) => [e.date, e.category, e.amount, e.paymentMethod, e.supplierName, e.note]),
         ],
-      ],
-      [
-        "dues.csv",
-        [
+      },
+      {
+        filename: "dues.csv",
+        rows: [
           ["type", "name", "originalAmount", "amountPaid", "status", "dueDate"],
           ...dues.map((d) => [d.type, d.name, d.originalAmount, d.payments.reduce((s, p) => s + p.amount, 0), d.status, d.dueDate]),
         ],
-      ],
-    ];
-    for (const [filename, rows] of files) {
-      downloadCSV(filename, rows);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-    }
+      },
+    ]);
     setExportMsg(t("settings.exportDoneMsg"));
   }
 

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowDownCircle, ArrowUpCircle, Pencil, Trash2, Wallet } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Download, Pencil, Trash2, Wallet } from "lucide-react";
 import { useStore } from "../store/useStore";
 import { useT } from "../lib/i18n/useT";
 import { Card } from "../components/ui/Card";
@@ -11,6 +11,7 @@ import { formatDate } from "../lib/dateFormat";
 import { cashOnHand, cashPaidForExpenses, cashReceivedFromSales, duePaymentsTotal } from "../lib/calculations";
 import { PAYMENT_METHODS, EXPENSE_CATEGORY_VALUES, type Currency, type Expense, type ExpenseCategory, type PaymentMethod, type Sale } from "../types";
 import { localDateOf, nowISO, todayISO } from "../lib/id";
+import { downloadCsvFile } from "../lib/exportCsv";
 
 const MAX_AMOUNT = 10_000_000;
 const NOTE_MAX_LENGTH = 200;
@@ -182,11 +183,37 @@ export function MoneyInOut() {
   const RECENT_TRANSACTIONS_PREVIEW = 25;
   const recentTransactions = showAllTransactions ? allTransactions : allTransactions.slice(0, RECENT_TRANSACTIONS_PREVIEW);
 
+  function exportTransactions() {
+    downloadCsvFile("transactions.csv", [
+      ["date", "type", "description", "amount", "paymentMethod"],
+      ...allTransactions.map((tx) => {
+        if (tx.kind === "sale") {
+          return [localDateOf(tx.sale.date), "sale", tx.sale.isQuickCash ? "Cash sale" : tx.sale.productName, tx.sale.total, tx.sale.paymentMethod];
+        }
+        if (tx.kind === "expense") {
+          return [localDateOf(tx.expense.date), "expense", tx.expense.category, -tx.expense.amount, tx.expense.paymentMethod];
+        }
+        return [
+          tx.payment.date,
+          "duePayment",
+          tx.due.type === "customer" ? `From ${tx.due.name}` : `To ${tx.due.name}`,
+          tx.due.type === "customer" ? tx.payment.amount : -tx.payment.amount,
+          "",
+        ];
+      }),
+    ]);
+  }
+
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{t("money.title")}</h1>
-        <p className="mt-1 text-sm text-gray-500">{t("money.subtitle")}</p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">{t("money.title")}</h1>
+          <p className="mt-1 text-sm text-gray-500">{t("money.subtitle")}</p>
+        </div>
+        <Button variant="outline" icon={<Download size={16} />} onClick={exportTransactions}>
+          {t("settings.exportCsvBtn")}
+        </Button>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">

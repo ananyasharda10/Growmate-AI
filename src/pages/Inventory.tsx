@@ -3,6 +3,7 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   Clock,
+  Download,
   Pencil,
   Plus,
   RotateCcw,
@@ -27,6 +28,7 @@ import {
   isExpiringSoon,
 } from "../lib/calculations";
 import { todayISO } from "../lib/id";
+import { downloadCsvFile } from "../lib/exportCsv";
 
 const emptyForm = {
   name: "",
@@ -288,6 +290,13 @@ export function Inventory() {
     setAdjustNote("");
   }
 
+  function exportProducts() {
+    downloadCsvFile("products.csv", [
+      ["name", "unit", "cost", "sell", "stock", "reorderLevel", "expiryDate", "supplier", "archived"],
+      ...products.map((p) => [p.name, p.unit, p.cost, p.sell, p.stock, p.reorderLevel, p.expiryDate, p.supplier, String(p.archived)]),
+    ]);
+  }
+
   return (
     <div>
       <div className="mb-6 flex items-start justify-between">
@@ -295,9 +304,14 @@ export function Inventory() {
           <h1 className="text-2xl font-bold text-gray-900">{t("inventory.title")}</h1>
           <p className="mt-1 text-sm text-gray-500">{t("inventory.subtitle")}</p>
         </div>
-        <Button icon={<Plus size={16} />} onClick={openAdd}>
-          {t("inventory.addProduct")}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" icon={<Download size={16} />} onClick={exportProducts}>
+            {t("settings.exportCsvBtn")}
+          </Button>
+          <Button icon={<Plus size={16} />} onClick={openAdd}>
+            {t("inventory.addProduct")}
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4 flex items-center gap-3">
