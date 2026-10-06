@@ -123,3 +123,33 @@ test("6. a demo session survives a direct load / full refresh of an inner page",
   await expect(page).toHaveURL(/\/money/);
   await expect(page.getByText(/Money In|Record Expense|Quick Cash/i).first()).toBeVisible();
 });
+
+test("7. a currency conversion and a business-name edit both survive a full reload", async ({ page }) => {
+  await startDemo(page);
+  await goToNav(page, "Settings");
+
+  // Neither field's <label> is wired via htmlFor/id, so both are located relative to their
+  // label text instead of getByLabel (same approach as test 3).
+  const nameInput = page.locator("label", { hasText: "Business name" }).locator("xpath=following-sibling::input");
+  const currencySelect = page.locator("label", { hasText: "Currency" }).locator("xpath=following-sibling::select");
+
+  await nameInput.fill("Reload Test Stall");
+  await page.getByRole("button", { name: "Save changes" }).click();
+
+  // Convert currency INR -> USD, which only reaching the confirmation modal (not a real
+  // conversion) would be a false positive, so wait for the post-conversion confirmation too.
+  await currencySelect.selectOption("USD");
+  await page.getByRole("button", { name: "Convert", exact: true }).click();
+  await page.getByRole("button", { name: "Got it" }).click();
+  await expect(currencySelect).toHaveValue("USD");
+
+  // A real full reload, not an SPA route change — this used to silently re-seed the fresh
+  // INR demo data and revert both the name and the currency.
+  await page.reload();
+  await expect(page).not.toHaveURL(/\/auth/);
+  await goToNav(page, "Settings");
+  const nameInputAfterReload = page.locator("label", { hasText: "Business name" }).locator("xpath=following-sibling::input");
+  const currencySelectAfterReload = page.locator("label", { hasText: "Currency" }).locator("xpath=following-sibling::select");
+  await expect(nameInputAfterReload).toHaveValue("Reload Test Stall");
+  await expect(currencySelectAfterReload).toHaveValue("USD");
+});

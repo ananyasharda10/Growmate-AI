@@ -124,10 +124,15 @@ export function Inventory() {
   }, [products, search, showArchived]);
   const archivedCount = products.filter((p) => p.archived).length;
 
+  // Includes archived products in the match — an archived product keeps its name, so adding a
+  // new active product with the exact same name is just as much a duplicate as two active
+  // products sharing a name, even though it previously went unflagged (a real failure seen in
+  // testing: archiving a product and re-adding it under the same name created a silent
+  // duplicate with no warning, since the check only ever looked at active products).
   const matchingProduct = useMemo(() => {
     const key = form.name.trim().toLowerCase();
     if (!key) return undefined;
-    return products.find((p) => !p.archived && p.id !== editing?.id && p.name.trim().toLowerCase() === key);
+    return products.find((p) => p.id !== editing?.id && p.name.trim().toLowerCase() === key);
   }, [form.name, products, editing]);
 
   const negativeMargin = Number(form.cost) > 0 && Number(form.sell) > 0 && Number(form.cost) > Number(form.sell);
@@ -178,7 +183,11 @@ export function Inventory() {
       setFormError(t("inventory.invalidSellPrice"));
       return;
     }
-    if (payload.cost < 0 || payload.stock < 0 || payload.reorderLevel < 0) {
+    if (payload.cost <= 0) {
+      setFormError(t("inventory.invalidCostPrice"));
+      return;
+    }
+    if (payload.stock < 0 || payload.reorderLevel < 0) {
       setFormError(t("inventory.invalidNegativeValue"));
       return;
     }
@@ -462,7 +471,9 @@ export function Inventory() {
           </div>
           {matchingProduct && (
             <p className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              {t("inventory.duplicateNameNotice", { name: matchingProduct.name })}
+              {matchingProduct.archived
+                ? t("inventory.duplicateArchivedNameNotice", { name: matchingProduct.name })
+                : t("inventory.duplicateNameNotice", { name: matchingProduct.name })}
             </p>
           )}
           <div className="grid grid-cols-2 gap-3">

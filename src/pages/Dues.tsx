@@ -31,6 +31,8 @@ export function Dues() {
   const [dueDate, setDueDate] = useState("");
   const [note, setNote] = useState("");
 
+  const [addFormError, setAddFormError] = useState("");
+
   const [editTarget, setEditTarget] = useState<Due | null>(null);
   const [payTarget, setPayTarget] = useState<Due | null>(null);
   const [payAmount, setPayAmount] = useState(0);
@@ -57,16 +59,33 @@ export function Dues() {
     setAmount(0);
     setDueDate("");
     setNote("");
+    setAddFormError("");
+  }
+
+  // Shared by both submit paths (new due vs. adding to an existing one) — neither should be a
+  // silent no-op; a real failure seen in testing was an empty/negative/zero submit leaving the
+  // dialog open with no indication of why nothing happened.
+  function validateAddForm(): boolean {
+    if (!name.trim()) {
+      setAddFormError(t("dues.nameRequired"));
+      return false;
+    }
+    if (amount <= 0) {
+      setAddFormError(t("dues.invalidAmount"));
+      return false;
+    }
+    setAddFormError("");
+    return true;
   }
 
   function submitAdd() {
-    if (!name.trim() || amount <= 0) return;
+    if (!validateAddForm()) return;
     addDue({ type: tab, name: name.trim(), originalAmount: amount, dueDate: dueDate || undefined, note: note || undefined });
     resetAddForm();
   }
 
   function submitAddToExisting() {
-    if (!matchingDue || amount <= 0) return;
+    if (!matchingDue || !validateAddForm()) return;
     updateDue(matchingDue.id, {
       originalAmount: matchingDue.originalAmount + amount,
       dueDate: dueDate || matchingDue.dueDate,
@@ -121,6 +140,7 @@ export function Dues() {
             setAmount(0);
             setDueDate("");
             setNote("");
+            setAddFormError("");
             setAddOpen(true);
           }}
         >
@@ -230,6 +250,7 @@ export function Dues() {
             <Label>{t("dues.noteOptionalLabel")}</Label>
             <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
+          {addFormError && <p className="text-sm text-red-600">{addFormError}</p>}
           {matchingDue ? (
             <div className="space-y-2">
               <Button fullWidth onClick={submitAddToExisting}>

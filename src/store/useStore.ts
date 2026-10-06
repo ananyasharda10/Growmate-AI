@@ -121,7 +121,7 @@ interface StoreState {
   settleDue: (dueId: string) => void;
   undoSettleDue: (dueId: string) => void;
 
-  loadDemoData: () => void;
+  loadDemoData: (preserveSettings?: boolean) => void;
   resetDemoData: () => void;
   clearAllData: () => void;
 }
@@ -841,12 +841,20 @@ export const useStore = create<StoreState>()(
       fireSync([supabase.from("dues").update(dueToRow(userId(), updated)).eq("id", dueId).eq("user_id", userId())], prev);
     },
 
-    loadDemoData: () => {
+    // preserveSettings=true regenerates the deterministic demo transaction history (products,
+    // sales, expenses, dues) WITHOUT touching settings (currency, business name, opening cash
+    // balance, etc.) — used when restoring a demo session after a full page reload, where the
+    // user's prior edits/conversions should survive exactly like they do across in-app
+    // navigation. preserveSettings=false (the default) is the explicit "Start demo" / "Load /
+    // reset demo data" reset, which is documented as resetting everything EXCEPT currency —
+    // switching currency is treated as a standing preference, not sample data, so even a full
+    // reset keeps whatever currency was last selected rather than forcing the seed's default.
+    loadDemoData: (preserveSettings = false) => {
       const demo = buildDemoData();
-      // Keep whatever currency is already selected (including one the user just switched to
-      // in demo mode) — demo.settings.currency is only the fallback for the very first load,
-      // never something a later reset should overwrite.
       const currency = get().settings.currency ?? demo.settings.currency;
+      const settings = preserveSettings
+        ? get().settings
+        : { ...get().settings, ...demo.settings, currency, onboardingDismissed: true };
       set({
         session: DEMO_SESSION,
         products: demo.products,
@@ -854,11 +862,11 @@ export const useStore = create<StoreState>()(
         sales: demo.sales,
         expenses: demo.expenses,
         dues: demo.dues,
-        settings: { ...get().settings, ...demo.settings, currency, onboardingDismissed: true },
+        settings,
         isDemo: true,
         hydrated: true,
         syncError: null,
-        advisorConversation: [],
+        advisorConversation: preserveSettings ? get().advisorConversation : [],
       });
     },
 
@@ -887,7 +895,18 @@ export const useStore = create<StoreState>()(
       // tell "was in a demo session" apart from "never signed in" and regenerate the same
       // demo dataset (see App.tsx) instead of bouncing the user to /auth — demo data is
       // deterministic (a fixed seed), so regenerating it reproduces exactly what was there.
-      partialize: (s) => ({ language: s.language, advisorConversation: s.advisorConversation, isDemo: s.isDemo }),
+      // settings is also persisted so a currency conversion or a business-name/opening-cash
+      // edit made during a demo session survives a full page reload instead of being wiped
+      // back to the fresh seed's defaults — a real failure seen in testing (a converted
+      // currency and an edited business name both silently reverted on direct navigation).
+      // For a signed-in session this is harmless: the authoritative settings load from
+      // Supabase on session restore and overwrite whatever was persisted here.
+      partialize: (s) => ({
+        language: s.language,
+        advisorConversation: s.advisorConversation,
+        isDemo: s.isDemo,
+        settings: s.settings,
+      }),
     }
   )
 );

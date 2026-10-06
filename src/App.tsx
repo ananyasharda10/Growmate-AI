@@ -48,12 +48,15 @@ export default function App() {
 
   // A full page reload (not an in-app navigation) always starts from an empty in-memory
   // store — including demo mode, which never had a real Supabase session to restore. Only
-  // the `isDemo` flag itself survives (persisted). Regenerating the same deterministic demo
-  // dataset here means a direct load/refresh of an inner page keeps a demo session going
-  // instead of silently dropping back to /auth.
+  // `isDemo` and `settings` survive (persisted). Regenerating the same deterministic demo
+  // transaction history here means a direct load/refresh of an inner page keeps a demo
+  // session going instead of silently dropping back to /auth — passing preserveSettings=true
+  // keeps whatever currency/business-name/etc. the user had set, rather than resetting them
+  // back to the fresh seed (a real failure seen in testing: a currency conversion and a
+  // business-name edit both silently reverted on a direct page load).
   useEffect(() => {
     if (!languageReady || session) return;
-    if (useStore.getState().isDemo) loadDemoData();
+    if (useStore.getState().isDemo) loadDemoData(true);
   }, [languageReady, session, loadDemoData]);
 
   useEffect(() => {

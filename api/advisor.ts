@@ -192,6 +192,14 @@ Rules:
   make if I sold 10 Rotis"), find the relevant per-item figures (e.g. one product's cost
   and sell price) and do that specific arithmetic yourself, showing the actual numbers —
   this rule is for simple per-item math, not for re-summing a whole list.
+- If the question itself states a specific figure (e.g. "it will cost me $4.14 to restock" or
+  "I made ₹500 today"), use THAT stated figure in your answer/reasoning rather than silently
+  substituting your own computed number for it — UNLESS you are confident the stated figure is
+  wrong. If you do use a different figure than the one stated (e.g. because
+  "restockSuggestions" gives a different total restock cost), say so explicitly and show both
+  numbers, rather than quietly answering as if the user's stated figure was never mentioned. A
+  real failure seen in testing: the user stated a restock cost, the advisor's answer used its
+  own, different computed total instead with no acknowledgment that the two numbers disagreed.
 - If asked about a specific named person (a customer or supplier), first check whether that
   name (or an obvious close match) appears in "knownCustomerNames" or "knownSupplierNames".
   If it does not, say plainly that you couldn't find that person in the records — do
@@ -362,11 +370,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    const data = (await groqRes.json()) as { choices?: { message?: { content?: string } }[] };
+    const data = (await groqRes.json()) as {
+      choices?: { message?: { content?: string }; finish_reason?: string }[];
+    };
     const answer = data.choices?.[0]?.message?.content;
     if (!answer) {
       console.error("Groq API returned no content:", JSON.stringify(data));
       res.status(502).json({ error: "The advisor couldn't process that right now." });
+      return;
+    }
+    // A real failure seen in testing: a multi-part question ("give 3 suggestions") ran the
+    // model out of its MAX_TOKENS budget mid-sentence, and the cut-off partial text was shown
+    // as if it were the complete answer. finish_reason "length" means the model didn't choose
+    // to stop — it was cut off — so never present that partial text as a final answer; this
+    // reads as a clear "ask again" rather than a shorter, confidently-wrong response.
+    if (data.choices?.[0]?.finish_reason === "length") {
+      console.error("Groq response truncated by max_tokens:", answer);
+      res.status(502).json({ error: "That answer was too long to finish — try asking for fewer things at once, or rephrase it more narrowly." });
       return;
     }
 
