@@ -79,7 +79,8 @@ expenseTotalsByCategory (each with a percentOfTotal), salesLast7Days, salesLast7
 salesLast30Days, todayByProduct, last30DaysByProduct, totalProfitAllTime, moneyInAllTime,
 moneyOutAllTime, moneyInThisMonth, moneyOutThisMonth, biggestSaleEver, biggestSaleLast30Days,
 biggestExpenseEver, biggestExpenseLast30Days, biggestExpenseThisMonth, topIncomeTransactions,
-topExpenseTransactions — followed by the full product and dues lists (each due has an
+topExpenseTransactions — followed by the product list and the dues list (every
+pending/partial due in full, plus only the most recent settled ones; each due has an
 isOverdue flag), and finally a capped, recent-only sample of individual sales/expenses
 (recentSales/recentExpenses) for lookups the summaries don't cover:
 ${contextJson}

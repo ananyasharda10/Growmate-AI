@@ -69,6 +69,19 @@ export const SAMPLE_QUESTION_IDS: QuestionId[] = [
 // specific lookup, not a full history.
 const MAX_RAW_SALES = 30;
 const MAX_RAW_EXPENSES = 30;
+// Settled dues, unlike pending ones, are rarely what a question is actually about — but
+// unlike recentSales/recentExpenses, the full "dues" list had no cap at all, so an account
+// with weeks of accumulated history (many settled customer/supplier dues from testing) could
+// make this single field alone exceed Groq's entire 8,000-token-per-minute budget — a real
+// failure seen in testing: a 40-product/80-due account's context came to ~8,400 tokens by
+// itself, meaning literally every request failed regardless of how far apart they were spaced.
+// Every PENDING/PARTIAL due is always kept in full (these are the ones "what do I owe/what's
+// owed to me" questions are actually about); only settled ones are capped, to the most recent.
+const MAX_SETTLED_DUES = 15;
+// A generous safety net, not the primary fix above — most small businesses won't approach
+// this many simultaneously active products, but an unusually large catalog shouldn't be able
+// to blow the budget the same way an accumulated due history could.
+const MAX_PRODUCTS = 60;
 
 function withinLastDays(dateISO: string, days: number, today: string): boolean {
   const diff = daysBetween(dateISO, today);
@@ -84,7 +97,7 @@ function withinLastDays(dateISO: string, days: number, today: string): boolean {
 export function buildAdvisorContext(ctx: AskContext): string {
   const today = todayISO();
 
-  const products = ctx.products
+  const allActiveProducts = ctx.products
     .filter((p) => !p.archived)
     .map((p) => ({
       name: p.name,
@@ -101,6 +114,10 @@ export function buildAdvisorContext(ctx: AskContext): string {
       expired: isExpired(p, today),
       supplier: p.supplier ?? null,
     }));
+  // Capped for size (see MAX_PRODUCTS above) — but knownProductNames below is built from the
+  // FULL list, not this capped one, so an uncommon/overflow product still correctly resolves
+  // as "known" instead of wrongly tripping the "couldn't find that product" rule.
+  const products = allActiveProducts.slice(0, MAX_PRODUCTS);
 
   // ---- Precomputed totals and rolling windows (never left for the model to sum itself) ----
   // Every one of these mirrors a calculation the rest of the app already does (Dashboard,
@@ -130,7 +147,7 @@ export function buildAdvisorContext(ctx: AskContext): string {
 
   const knownCustomerNames = ctx.dues.filter((d) => d.type === "customer").map((d) => d.name);
   const knownSupplierNames = ctx.dues.filter((d) => d.type === "supplier").map((d) => d.name);
-  const knownProductNames = products.map((p) => p.name);
+  const knownProductNames = allActiveProducts.map((p) => p.name);
 
   const pendingCustomerDuesTotal = ctx.dues
     .filter((d) => d.type === "customer" && d.status !== "settled")
@@ -357,7 +374,17 @@ export function buildAdvisorContext(ctx: AskContext): string {
     supplierName: e.supplierName ?? null,
   }));
 
-  const dues = ctx.dues.map((d) => ({
+  // Settled dues are capped to the most recent (see MAX_SETTLED_DUES above) — every
+  // pending/partial due is always kept in full, since those are what "what do I owe"/"who
+  // owes me" questions actually need.
+  const settledDuesSorted = [...ctx.dues.filter((d) => d.status === "settled")].sort((a, b) =>
+    (b.settledAt ?? b.createdAt) < (a.settledAt ?? a.createdAt) ? -1 : 1
+  );
+  const duesForContext = [
+    ...ctx.dues.filter((d) => d.status !== "settled"),
+    ...settledDuesSorted.slice(0, MAX_SETTLED_DUES),
+  ];
+  const dues = duesForContext.map((d) => ({
     type: d.type,
     name: d.name,
     originalAmount: d.originalAmount,
