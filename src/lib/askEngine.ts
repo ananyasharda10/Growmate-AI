@@ -180,6 +180,21 @@ export function buildAdvisorContext(ctx: AskContext): string {
   const salesLast7Days = salesWindow(7);
   const salesLast30Days = salesWindow(30);
 
+  // Day-by-day breakdown of the last 7 days — a real failure seen in testing: asked "how much
+  // did I sell yesterday" or "which of the last 7 days was my best", the model had only the
+  // 7-day TOTAL (salesLast7Days) to work with and either refused to break it down or guessed.
+  // Built as one entry per calendar day (oldest first), including zero-sale days explicitly
+  // rather than omitting them, so the model can't mistake "no entry" for "no data".
+  const salesLast7DaysByDay = Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(today, -(6 - i));
+    const inDay = ctx.sales.filter((s) => localDateOf(s.date) === date);
+    return {
+      date,
+      transactionCount: inDay.length,
+      revenue: inDay.reduce((s, x) => s + x.total, 0),
+    };
+  });
+
   // Per-product sales/profit, for questions like "how much profit did X make in the last 30
   // days" or "which product has the best margin today" — precomputed exactly (a known
   // failure mode: the model otherwise tends to sum a product's ENTIRE sales history instead
@@ -235,6 +250,37 @@ export function buildAdvisorContext(ctx: AskContext): string {
   const moneyInAllTime = cashReceivedFromSales(ctx.sales) + duePaymentsTotal(ctx.dues, "customer");
   const moneyOutAllTime = cashPaidForExpenses(ctx.expenses) + duePaymentsTotal(ctx.dues, "supplier");
 
+  // Due-payment dates are stored as plain "YYYY-MM-DD" (no time-of-day), unlike a sale's full
+  // timestamp — localDateOf expects the latter and would shift a date-only string by
+  // timezone, so only convert when there's actually a time component to extract from.
+  const dateOnly = (d: string) => (d.includes("T") ? localDateOf(d) : d);
+
+  // Calendar-month totals — distinct from both the all-time figures above and the rolling
+  // 30-day window (salesLast30Days/last30DaysByProduct), since "this month" means the
+  // current calendar month specifically, which rarely lines up with "the last 30 days". A
+  // real failure seen in testing: asked for "money in this month", the model had nothing
+  // scoped to the calendar month at all and fell back to inventing a figure. Mirrors
+  // moneyInAllTime/moneyOutAllTime's own formulas (sales/expenses plus due payments), just
+  // scoped to dates sharing today's "YYYY-MM" prefix.
+  const thisMonthPrefix = today.slice(0, 7);
+  const inThisMonth = (dateISO: string) => dateISO.slice(0, 7) === thisMonthPrefix;
+  const salesThisMonth = ctx.sales.filter((s) => inThisMonth(localDateOf(s.date)));
+  const expensesThisMonth = ctx.expenses.filter((e) => inThisMonth(localDateOf(e.date)));
+  const moneyInThisMonth =
+    cashReceivedFromSales(salesThisMonth) +
+    ctx.dues
+      .filter((d) => d.type === "customer")
+      .flatMap((d) => d.payments)
+      .filter((p) => inThisMonth(dateOnly(p.date)))
+      .reduce((s, p) => s + p.amount, 0);
+  const moneyOutThisMonth =
+    cashPaidForExpenses(expensesThisMonth) +
+    ctx.dues
+      .filter((d) => d.type === "supplier")
+      .flatMap((d) => d.payments)
+      .filter((p) => inThisMonth(dateOnly(p.date)))
+      .reduce((s, p) => s + p.amount, 0);
+
   // Same reasoning for "top N income/expense transactions" — recentSales/recentExpenses are
   // capped and only the most RECENT, not necessarily the LARGEST, so scanning them for a
   // "biggest transactions" question can miss the real top rows entirely once there's more
@@ -246,10 +292,6 @@ export function buildAdvisorContext(ctx: AskContext): string {
   ) {
     return [...entries].sort((a, b) => b.amount - a.amount).slice(0, limit);
   }
-  // Due-payment dates are stored as plain "YYYY-MM-DD" (no time-of-day), unlike a sale's full
-  // timestamp — localDateOf expects the latter and would shift a date-only string by
-  // timezone, so only convert when there's actually a time component to extract from.
-  const dateOnly = (d: string) => (d.includes("T") ? localDateOf(d) : d);
   const topIncomeTransactions = topTransactions([
     ...ctx.sales.filter((s) => s.paymentMethod !== "credit").map((s) => ({ source: s.productName, amount: s.total, date: localDateOf(s.date) })),
     ...ctx.dues
@@ -274,6 +316,10 @@ export function buildAdvisorContext(ctx: AskContext): string {
   }
   const biggestExpenseEver = biggestExpense(ctx.expenses);
   const biggestExpenseLast30Days = biggestExpense(ctx.expenses.filter((e) => withinLastDays(localDateOf(e.date), 30, today)));
+  // Calendar-month counterpart to the two above — a "biggest expense this month" question
+  // was otherwise getting silently answered from biggestExpenseLast30Days (a different,
+  // rolling window), mislabeling the result as "this month" when it wasn't.
+  const biggestExpenseThisMonth = biggestExpense(expensesThisMonth);
 
   function biggestSale(sales: Sale[]) {
     return sales.reduce<{ product: string; quantity: number; unitPrice: number; total: number; date: string } | null>(
@@ -313,6 +359,11 @@ export function buildAdvisorContext(ctx: AskContext): string {
     paid: d.payments.reduce((s, p) => s + p.amount, 0),
     status: d.status,
     dueDate: d.dueDate ?? null,
+    // Precomputed rather than left for the model to compare dueDate against today itself — a
+    // real failure seen in testing: asked which supplier to settle first, the model ranked
+    // purely by amount and recommended settling a larger, not-yet-due balance before a
+    // smaller balance that was already overdue.
+    isOverdue: d.status !== "settled" && !!d.dueDate && d.dueDate < today,
   }));
 
   return JSON.stringify({
@@ -327,16 +378,20 @@ export function buildAdvisorContext(ctx: AskContext): string {
     restockSuggestions,
     expenseTotalsByCategory,
     salesLast7Days,
+    salesLast7DaysByDay,
     salesLast30Days,
     todayByProduct,
     last30DaysByProduct,
     totalProfitAllTime,
     moneyInAllTime,
     moneyOutAllTime,
+    moneyInThisMonth,
+    moneyOutThisMonth,
     biggestSaleEver,
     biggestSaleLast30Days,
     biggestExpenseEver,
     biggestExpenseLast30Days,
+    biggestExpenseThisMonth,
     topIncomeTransactions,
     topExpenseTransactions,
     knownCustomerNames,
