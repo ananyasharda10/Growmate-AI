@@ -1,5 +1,14 @@
 import type { Currency, Due, Expense, Product, Sale } from "../types";
-import { buildRestockSuggestions, cashOnHand, cashPaidForExpenses, dueAmountRemaining, isExpired, marginAmount } from "./calculations";
+import {
+  buildRestockSuggestions,
+  cashOnHand,
+  cashPaidForExpenses,
+  cashReceivedFromSales,
+  dueAmountRemaining,
+  duePaymentsTotal,
+  isExpired,
+  marginAmount,
+} from "./calculations";
 import { addDays, localDateOf, todayISO, daysBetween } from "./id";
 
 export interface AskContext {
@@ -218,6 +227,36 @@ export function buildAdvisorContext(ctx: AskContext): string {
     return sum + marginAmount(costAtSale, s.unitPrice) * s.quantity;
   }, 0);
 
+  // Same all-time-total gap as above, but for the Money In/Out page's own two headline
+  // figures — asked for "total Money In" with no window named, the model had nothing to use
+  // but the capped recentSales/recentExpenses lists, which undercounts once there are more
+  // than MAX_RAW_SALES transactions, and produced a wrong, self-consistent-looking answer in
+  // testing. Mirrors MoneyInOut.tsx's own moneyIn/moneyOut formulas exactly.
+  const moneyInAllTime = cashReceivedFromSales(ctx.sales) + duePaymentsTotal(ctx.dues, "customer");
+  const moneyOutAllTime = cashPaidForExpenses(ctx.expenses) + duePaymentsTotal(ctx.dues, "supplier");
+
+  // Same reasoning for "top N income/expense transactions" — recentSales/recentExpenses are
+  // capped and only the most RECENT, not necessarily the LARGEST, so scanning them for a
+  // "biggest transactions" question can miss the real top rows entirely once there's more
+  // history than the cap. Combines sales (cash-received ones) and customer due payments, the
+  // same two row kinds the Money page's own transaction list shows as "money in".
+  function topTransactions(
+    entries: { source: string; amount: number; date: string }[],
+    limit = 5
+  ) {
+    return [...entries].sort((a, b) => b.amount - a.amount).slice(0, limit);
+  }
+  // Due-payment dates are stored as plain "YYYY-MM-DD" (no time-of-day), unlike a sale's full
+  // timestamp — localDateOf expects the latter and would shift a date-only string by
+  // timezone, so only convert when there's actually a time component to extract from.
+  const dateOnly = (d: string) => (d.includes("T") ? localDateOf(d) : d);
+  const topIncomeTransactions = topTransactions([
+    ...ctx.sales.filter((s) => s.paymentMethod !== "credit").map((s) => ({ source: s.productName, amount: s.total, date: localDateOf(s.date) })),
+    ...ctx.dues
+      .filter((d) => d.type === "customer")
+      .flatMap((d) => d.payments.map((p) => ({ source: d.name, amount: p.amount, date: dateOnly(p.date) }))),
+  ]);
+
   function biggestSale(sales: Sale[]) {
     return sales.reduce<{ product: string; quantity: number; unitPrice: number; total: number; date: string } | null>(
       (best, s) => (!best || s.total > best.total ? { product: s.productName, quantity: s.quantity, unitPrice: s.unitPrice, total: s.total, date: localDateOf(s.date) } : best),
@@ -274,8 +313,11 @@ export function buildAdvisorContext(ctx: AskContext): string {
     todayByProduct,
     last30DaysByProduct,
     totalProfitAllTime,
+    moneyInAllTime,
+    moneyOutAllTime,
     biggestSaleEver,
     biggestSaleLast30Days,
+    topIncomeTransactions,
     knownCustomerNames,
     knownSupplierNames,
     knownProductNames,

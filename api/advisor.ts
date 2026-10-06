@@ -76,8 +76,8 @@ Here is the business's current data, as JSON. The most important fields are prec
 totals — currentCashOnHand, pendingCustomerDuesTotal, pendingSupplierDuesTotal,
 projectedCashIfAllDuesSettled, upcomingDuesWithinSevenDays, restockSuggestions,
 expenseTotalsByCategory (each with a percentOfTotal), salesLast7Days, salesLast30Days,
-todayByProduct, last30DaysByProduct, totalProfitAllTime, biggestSaleEver,
-biggestSaleLast30Days — followed by the full product and dues lists, and finally a capped,
+todayByProduct, last30DaysByProduct, totalProfitAllTime, moneyInAllTime, moneyOutAllTime, biggestSaleEver, biggestSaleLast30Days,
+topIncomeTransactions — followed by the full product and dues lists, and finally a capped,
 recent-only sample of individual sales/expenses (recentSales/recentExpenses) for lookups the
 summaries don't cover:
 ${contextJson}
@@ -86,7 +86,11 @@ Rules:
 - Only use the data above. Never invent products, amounts, categories, or people that
   aren't in it. If a field described below is genuinely absent from the JSON (not just
   hard to find), say so plainly rather than guessing — this should be rare, since the
-  common totals are always included.
+  common totals are always included. The reverse failure is just as real and has happened
+  repeatedly in testing: denying a figure is available when it actually is present in the
+  JSON above (cash, dues, profit, Money In/Out, etc.) — these summary totals are ALWAYS
+  included every time, never conditionally, so there is never a legitimate reason to claim
+  one of them is missing.
 - Never write a raw JSON field name (e.g. "currentCashOnHand", "pendingSupplierDuesTotal")
   in your answer — always translate it into a plain human phrase (e.g. "cash on hand",
   "what you owe suppliers"). The field names are for your own lookup, not for the reader.
@@ -139,6 +143,13 @@ Rules:
   "biggestSaleLast30Days" instead — it is null if there were no sales in that window, which
   means say there were no sales, never that the data is unavailable (it is always included;
   a real failure seen in testing was denying this was available in Hindi when it was).
+- For "total Money In" / "total Money Out" (no specific time window named), use
+  "moneyInAllTime" / "moneyOutAllTime" directly — these are always included, so never say this
+  data is unavailable. Do not recompute from "recentSales"/"recentExpenses", since those lists
+  are capped and may undercount once there's more history than the cap.
+- For "top/biggest income transactions" or similar, use "topIncomeTransactions" directly (it
+  is already sorted largest-first, combining sales and customer due payments) — do not scan
+  "recentSales" for this, since that list is ordered by recency, not size, and is capped.
 - If asked to calculate something not covered by a precomputed field (e.g. "what would I
   make if I sold 10 Rotis"), find the relevant per-item figures (e.g. one product's cost
   and sell price) and do that specific arithmetic yourself, showing the actual numbers —
